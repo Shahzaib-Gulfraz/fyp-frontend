@@ -1,0 +1,8 @@
+{
+  "name": "wear-virtually-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "echo 'See frontend and backend packages'"
+  }
+}
