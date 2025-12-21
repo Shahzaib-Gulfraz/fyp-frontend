@@ -1,0 +1,6 @@
+﻿app/(main)/avatar/index.tsx(134,20): error TS2322: Type '{ barStyle: string; }' is not assignable to type 'IntrinsicAttributes & StatusBarProps'.
+  Property 'barStyle' does not exist on type 'IntrinsicAttributes & StatusBarProps'.
+app/(main)/avatar/index.tsx(260,18): error TS2322: Type '{ barStyle: string; }' is not assignable to type 'IntrinsicAttributes & StatusBarProps'.
+  Property 'barStyle' does not exist on type 'IntrinsicAttributes & StatusBarProps'.
+app/(main)/profile/index.tsx(220,18): error TS2322: Type '{ barStyle: string; }' is not assignable to type 'IntrinsicAttributes & StatusBarProps'.
+  Property 'barStyle' does not exist on type 'IntrinsicAttributes & StatusBarProps'.
