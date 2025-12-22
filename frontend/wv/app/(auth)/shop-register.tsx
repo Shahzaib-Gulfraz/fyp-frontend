@@ -260,24 +260,85 @@ export default function RegisterShopScreen() {
     setIsLoading(true);
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Check if user is authenticated first
+      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+      const token = await AsyncStorage.getItem('authToken');
+
+      console.log('Token exists:', !!token);
+
+      if (!token) {
+        Alert.alert(
+          'Authentication Required',
+          'Please login again to create your shop',
+          [
+            {
+              text: 'Go to Login',
+              onPress: () => router.replace('/(auth)/login')
+            }
+          ]
+        );
+        setIsLoading(false);
+        return;
+      }
+
+      // Import shopService dynamically
+      const { shopService } = await import('../../src/api');
+
+      // Prepare shop data
+      const shopDataToSend = {
+        shopName: shopData.shopName,
+        shopUsername: shopData.shopUsername,
+        businessType: shopData.businessType,
+        description: shopData.description,
+        email: shopData.email,
+        phone: shopData.phone,
+        website: shopData.website || undefined,
+        address: shopData.address,
+        city: shopData.city,
+        country: shopData.country,
+        zipCode: shopData.zipCode || undefined,
+      };
+
+      // Prepare images
+      const images = {
+        logo: shopData.logo,
+        banner: shopData.banner,
+      };
+
+      console.log('Creating shop:', shopDataToSend);
+
+      // Call the real API
+      const response = await shopService.createShop(shopDataToSend, images);
+
+      console.log('Shop created successfully:', response.shop);
 
       Alert.alert(
-        "Registration Successful!",
-        "Your shop account has been created successfully. Please verify your email.",
+        "Shop Created!",
+        "Your shop has been created successfully!",
         [
           {
             text: "OK",
-            onPress: () => router.push("/(main)/shop/dashboard"),
+            onPress: () => router.replace("/(main)/shop/dashboard"),
           },
         ]
       );
-    } catch (error) {
-      Alert.alert(
-        "Registration Failed",
-        "An error occurred during registration. Please try again."
-      );
+    } catch (error: any) {
+      console.error('Shop creation error:', error);
+
+      // Handle different error types
+      if (error.status === 400) {
+        Alert.alert(
+          "Registration Failed",
+          error.message || "Shop username already exists or validation error"
+        );
+      } else if (error.status === 0) {
+        Alert.alert("Network Error", "Please check your internet connection");
+      } else {
+        Alert.alert(
+          "Registration Failed",
+          error.message || "An error occurred during registration. Please try again."
+        );
+      }
     } finally {
       setIsLoading(false);
     }
@@ -311,8 +372,8 @@ export default function RegisterShopScreen() {
             {stepNumber === 1
               ? "Basic Info"
               : stepNumber === 2
-              ? "Contact Details"
-              : "Password"}
+                ? "Contact Details"
+                : "Password"}
           </Text>
           {stepNumber < 3 && <View style={styles.stepLine} />}
         </View>
@@ -490,7 +551,7 @@ export default function RegisterShopScreen() {
                     style={[
                       styles.businessTypeButton,
                       shopData.businessType === type.id &&
-                        styles.businessTypeButtonSelected,
+                      styles.businessTypeButtonSelected,
                     ]}
                     onPress={() => handleInputChange("businessType", type.id)}
                   >
@@ -498,7 +559,7 @@ export default function RegisterShopScreen() {
                       style={[
                         styles.businessTypeText,
                         shopData.businessType === type.id &&
-                          styles.businessTypeTextSelected,
+                        styles.businessTypeTextSelected,
                       ]}
                     >
                       {type.label}

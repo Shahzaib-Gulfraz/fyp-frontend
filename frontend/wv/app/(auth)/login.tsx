@@ -112,10 +112,25 @@ export default function LoginScreen() {
 
     setIsLoading(true);
     try {
-      await new Promise((res) => setTimeout(res, 1500));
+      // Import authService dynamically to avoid circular dependencies
+      const { authService } = await import('../../src/api');
+
+      // Call the real API
+      const response = await authService.login(email, password);
+
+      console.log('Login successful:', response.user);
+
+      // Navigate to home screen
       router.replace("/(main)/home");
-    } catch {
-      Alert.alert("Login Failed", "Invalid credentials");
+    } catch (error: any) {
+      // Handle different error types
+      if (error.status === 401) {
+        Alert.alert("Login Failed", "Invalid email or password");
+      } else if (error.status === 0) {
+        Alert.alert("Network Error", "Please check your internet connection");
+      } else {
+        Alert.alert("Login Failed", error.message || "An error occurred");
+      }
     } finally {
       setIsLoading(false);
     }

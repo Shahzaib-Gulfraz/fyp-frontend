@@ -1,5 +1,5 @@
 // app/(main)/shop/profile.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   Modal,
   TextInput,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -55,23 +56,11 @@ export default function ShopProfileScreen() {
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showShareOptions, setShowShareOptions] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
-  
+  const [isLoading, setIsLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
+
   // Shop data
-  const [shopData, setShopData] = useState({
-    username: "@fashionhub",
-    shopName: "Fashion Hub Boutique",
-    description: "Premium fashion store with the latest trends in clothing and accessories. We deliver worldwide!",
-    location: "New York, USA",
-    email: "contact@fashionhub.com",
-    phone: "+1 (555) 123-4567",
-    website: "https://fashionhub.com",
-    established: "2018",
-    category: "Clothing & Apparel",
-    followers: 24580,
-    following: 342,
-    posts: 156,
-    rating: 4.7,
-  });
+  const [shopData, setShopData] = useState<any>(null);
 
   const [shopLinks, setShopLinks] = useState<ShopLink[]>([
     { id: "1", title: "Visit Website", url: "https://fashionhub.com", icon: "globe-outline" },
@@ -153,9 +142,57 @@ export default function ShopProfileScreen() {
     Inter_700Bold,
   });
 
+  // Load shop data on mount
+  useEffect(() => {
+    loadShopData();
+  }, []);
+
+  const loadShopData = async () => {
+    try {
+      const { shopService } = await import('../../../src/api');
+      const response = await shopService.getMyShop();
+
+      // Transform API data to component state
+      const shop = response.shop;
+      setShopData({
+        _id: shop._id,
+        username: `@${shop.shopUsername}`,
+        shopName: shop.shopName,
+        description: shop.description || '',
+        location: `${shop.city}, ${shop.country}`,
+        email: shop.email,
+        phone: shop.phone,
+        website: shop.website || '',
+        established: new Date(shop.createdAt).getFullYear().toString(),
+        category: shop.category || 'Clothing & Apparel',
+        followers: shop.stats?.followers || 0,
+        following: 0,
+        posts: shop.stats?.totalProducts || 0,
+        rating: shop.stats?.rating || 0,
+        city: shop.city,
+        country: shop.country,
+        address: shop.address,
+        zipCode: shop.zipCode,
+        businessType: shop.businessType,
+      });
+
+      if (shop.logo?.url) {
+        setProfileImage(shop.logo.url);
+      }
+      if (shop.banner?.url) {
+        setBannerImage(shop.banner.url);
+      }
+    } catch (error: any) {
+      console.error('Error loading shop:', error);
+      Alert.alert('Error', 'Failed to load shop data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleFollowToggle = () => {
     setIsFollowing(!isFollowing);
-    setShopData(prev => ({
+    setShopData((prev: any) => ({
       ...prev,
       followers: isFollowing ? prev.followers - 1 : prev.followers + 1
     }));
@@ -201,11 +238,9 @@ export default function ShopProfileScreen() {
 
   const handleShareProfile = async () => {
     if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync({
-        message: `Check out ${shopData.shopName}'s profile on Virtual Fashion Store: https://vfs.com/shop/${shopData.username}`,
-        url: 'https://vfs.com',
-        title: `Share ${shopData.shopName}`,
-      });
+      await Sharing.shareAsync(
+        `Check out ${shopData?.shopName || 'this shop'}'s profile on Virtual Fashion Store: https://vfs.com/shop/${shopData?.username || ''}`
+      );
     } else {
       Alert.alert("Sharing not available", "Sharing is not available on this device");
     }
@@ -216,9 +251,37 @@ export default function ShopProfileScreen() {
     setShowEditProfile(true);
   };
 
-  const handleSaveProfile = () => {
-    Alert.alert("Success", "Profile updated successfully");
-    setShowEditProfile(false);
+  const handleSaveProfile = async () => {
+    if (!shopData?._id) return;
+
+    setIsUpdating(true);
+    try {
+      const { shopService } = await import('../../../src/api');
+
+      const updateData = {
+        shopName: shopData.shopName,
+        description: shopData.description,
+        email: shopData.email,
+        phone: shopData.phone,
+        website: shopData.website,
+        address: shopData.address,
+        city: shopData.city,
+        country: shopData.country,
+        zipCode: shopData.zipCode,
+      };
+
+      await shopService.updateShop(shopData._id, updateData);
+
+      Alert.alert("Success", "Profile updated successfully");
+      setShowEditProfile(false);
+
+      // Reload shop data
+      await loadShopData();
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to update profile');
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   const navigateToDashboard = () => {
@@ -256,9 +319,9 @@ export default function ShopProfileScreen() {
     <View style={styles.bannerSection}>
       {/* Banner Image */}
       <TouchableOpacity onPress={pickBannerImage} style={styles.bannerContainer}>
-        <Image 
-          source={{ uri: bannerImage }} 
-          style={styles.bannerImage} 
+        <Image
+          source={{ uri: bannerImage }}
+          style={styles.bannerImage}
           resizeMode="cover"
         />
         <View style={styles.bannerOverlay}>
@@ -269,9 +332,9 @@ export default function ShopProfileScreen() {
       {/* Profile Image */}
       <View style={styles.profileImageContainer}>
         <TouchableOpacity onPress={pickProfileImage} style={styles.profileImageWrapper}>
-          <Image 
-            source={{ uri: profileImage }} 
-            style={styles.profileImage} 
+          <Image
+            source={{ uri: profileImage }}
+            style={styles.profileImage}
             resizeMode="cover"
           />
           <View style={styles.profileImageOverlay}>
@@ -301,14 +364,14 @@ export default function ShopProfileScreen() {
         </View>
       </View>
 
-      <TouchableOpacity 
-        style={[styles.followButton, isFollowing && styles.followingButton]} 
+      <TouchableOpacity
+        style={[styles.followButton, isFollowing && styles.followingButton]}
         onPress={handleFollowToggle}
       >
-        <Ionicons 
-          name={isFollowing ? "checkmark" : "add-outline"} 
-          size={20} 
-          color={isFollowing ? "#FFFFFF" : "#1A1A1A"} 
+        <Ionicons
+          name={isFollowing ? "checkmark" : "add-outline"}
+          size={20}
+          color={isFollowing ? "#FFFFFF" : "#1A1A1A"}
         />
         <Text style={[styles.followButtonText, isFollowing && styles.followingButtonText]}>
           {isFollowing ? "Following" : "Follow"}
@@ -320,7 +383,7 @@ export default function ShopProfileScreen() {
   const renderShopInfo = () => (
     <View style={styles.infoSection}>
       <Text style={styles.shopName}>{shopData.shopName}</Text>
-      
+
       {/* Rating */}
       <View style={styles.ratingContainer}>
         <Ionicons name="star" size={16} color="#FFD700" />
@@ -373,15 +436,15 @@ export default function ShopProfileScreen() {
 
   const renderActionButtons = () => (
     <View style={styles.actionsSection}>
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.editButton}
         onPress={handleEditProfile}
       >
         <Ionicons name="create-outline" size={20} color="#FFFFFF" />
         <Text style={styles.editButtonText}>Edit Profile</Text>
       </TouchableOpacity>
-      
-      <TouchableOpacity 
+
+      <TouchableOpacity
         style={styles.shareButton}
         onPress={() => setShowShareOptions(true)}
       >
@@ -430,9 +493,9 @@ export default function ShopProfileScreen() {
         contentContainerStyle={styles.postsGrid}
         renderItem={({ item }) => (
           <TouchableOpacity style={styles.postItem}>
-            <Image 
-              source={{ uri: item.image }} 
-              style={styles.postImage} 
+            <Image
+              source={{ uri: item.image }}
+              style={styles.postImage}
               resizeMode="cover"
             />
             <View style={styles.postOverlay}>
@@ -444,7 +507,7 @@ export default function ShopProfileScreen() {
               <View style={styles.postStats}>
                 <View style={styles.postStat}>
                   <Ionicons name="heart" size={14} color="#FFFFFF" />
-                  <Text style={styles.postStatText}>{item.likes > 1000 ? `${(item.likes/1000).toFixed(1)}k` : item.likes}</Text>
+                  <Text style={styles.postStatText}>{item.likes > 1000 ? `${(item.likes / 1000).toFixed(1)}k` : item.likes}</Text>
                 </View>
                 <View style={styles.postStat}>
                   <Ionicons name="chatbubble" size={14} color="#FFFFFF" />
@@ -478,8 +541,8 @@ export default function ShopProfileScreen() {
               <Text style={styles.formLabel}>Shop Name</Text>
               <TextInput
                 style={styles.input}
-                value={shopData.shopName}
-                onChangeText={(text) => setShopData(prev => ({ ...prev, shopName: text }))}
+                value={shopData?.shopName || ''}
+                onChangeText={(text) => setShopData((prev: any) => ({ ...prev, shopName: text }))}
                 placeholder="Enter shop name"
               />
             </View>
@@ -488,8 +551,8 @@ export default function ShopProfileScreen() {
               <Text style={styles.formLabel}>Username</Text>
               <TextInput
                 style={styles.input}
-                value={shopData.username}
-                onChangeText={(text) => setShopData(prev => ({ ...prev, username: text }))}
+                value={shopData?.username || ''}
+                onChangeText={(text) => setShopData((prev: any) => ({ ...prev, username: text }))}
                 placeholder="Enter username"
               />
             </View>
@@ -498,8 +561,8 @@ export default function ShopProfileScreen() {
               <Text style={styles.formLabel}>Description</Text>
               <TextInput
                 style={[styles.input, styles.textArea]}
-                value={shopData.description}
-                onChangeText={(text) => setShopData(prev => ({ ...prev, description: text }))}
+                value={shopData?.description || ''}
+                onChangeText={(text) => setShopData((prev: any) => ({ ...prev, description: text }))}
                 placeholder="Describe your shop"
                 multiline
                 numberOfLines={4}
@@ -511,8 +574,8 @@ export default function ShopProfileScreen() {
               <Text style={styles.formLabel}>Location</Text>
               <TextInput
                 style={styles.input}
-                value={shopData.location}
-                onChangeText={(text) => setShopData(prev => ({ ...prev, location: text }))}
+                value={shopData?.location || ''}
+                onChangeText={(text) => setShopData((prev: any) => ({ ...prev, location: text }))}
                 placeholder="Enter location"
               />
             </View>
@@ -521,8 +584,8 @@ export default function ShopProfileScreen() {
               <Text style={styles.formLabel}>Email</Text>
               <TextInput
                 style={styles.input}
-                value={shopData.email}
-                onChangeText={(text) => setShopData(prev => ({ ...prev, email: text }))}
+                value={shopData?.email || ''}
+                onChangeText={(text) => setShopData((prev: any) => ({ ...prev, email: text }))}
                 placeholder="Enter email"
                 keyboardType="email-address"
               />
@@ -532,8 +595,8 @@ export default function ShopProfileScreen() {
               <Text style={styles.formLabel}>Phone</Text>
               <TextInput
                 style={styles.input}
-                value={shopData.phone}
-                onChangeText={(text) => setShopData(prev => ({ ...prev, phone: text }))}
+                value={shopData?.phone || ''}
+                onChangeText={(text) => setShopData((prev: any) => ({ ...prev, phone: text }))}
                 placeholder="Enter phone number"
                 keyboardType="phone-pad"
               />
@@ -543,8 +606,8 @@ export default function ShopProfileScreen() {
               <Text style={styles.formLabel}>Website</Text>
               <TextInput
                 style={styles.input}
-                value={shopData.website}
-                onChangeText={(text) => setShopData(prev => ({ ...prev, website: text }))}
+                value={shopData?.website || ''}
+                onChangeText={(text) => setShopData((prev: any) => ({ ...prev, website: text }))}
                 placeholder="Enter website URL"
               />
             </View>
@@ -581,17 +644,17 @@ export default function ShopProfileScreen() {
               <Ionicons name="share-social-outline" size={24} color="#7B61FF" />
               <Text style={styles.shareOptionText}>Share via...</Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity style={styles.shareOption}>
               <Ionicons name="copy-outline" size={24} color="#7B61FF" />
               <Text style={styles.shareOptionText}>Copy Link</Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity style={styles.shareOption}>
               <Ionicons name="qr-code-outline" size={24} color="#7B61FF" />
               <Text style={styles.shareOptionText}>QR Code</Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity style={styles.shareOption}>
               <Ionicons name="mail-outline" size={24} color="#7B61FF" />
               <Text style={styles.shareOptionText}>Email</Text>
@@ -602,11 +665,20 @@ export default function ShopProfileScreen() {
     </Modal>
   );
 
-  if (!fontsLoaded) {
+  if (!fontsLoaded || isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#000" />
+        <Text style={styles.loadingText}>Loading Profile...</Text>
+      </View>
+    );
+  }
+
+  if (!shopData) {
     return (
       <View style={styles.loadingContainer}>
         <Ionicons name="storefront" size={40} color="#000000" />
-        <Text style={styles.loadingText}>Loading Profile...</Text>
+        <Text style={styles.loadingText}>No shop data found</Text>
       </View>
     );
   }
@@ -614,9 +686,9 @@ export default function ShopProfileScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
-      
+
       {renderHeader()}
-      
+
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}

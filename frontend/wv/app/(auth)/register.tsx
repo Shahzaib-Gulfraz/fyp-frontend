@@ -190,7 +190,19 @@ export default function RegisterScreen() {
 
     setIsLoading(true);
     try {
-      // Simulate API call - Replace with actual registration
+      // Import authService dynamically
+      const { authService } = await import('../../src/api');
+
+      // Prepare user data
+      const userData = {
+        fullName,
+        email,
+        username,
+        password,
+        phone: phone.trim() || undefined,
+        role: userRole,
+      };
+
       console.log("Registration attempt:", {
         fullName,
         email,
@@ -199,25 +211,57 @@ export default function RegisterScreen() {
         role: userRole,
       });
 
-      // For demo purposes, simulate successful registration
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Call the real API
+      const response = await authService.register(userData);
 
-      Alert.alert(
-        "Registration Successful",
-        "Your account has been created successfully. Please verify your email.",
+      console.log('Registration successful:', response.user);
 
-        [
-          {
-            text: "OK",
-            onPress: () => router.replace("/(auth)/login"),
-          },
-        ]
-      );
-    } catch (error) {
-      Alert.alert(
-        "Registration Failed",
-        "An error occurred during registration. Please try again."
-      );
+      // Verify token was saved
+      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+      const savedToken = await AsyncStorage.getItem('authToken');
+      console.log('Token saved after registration:', !!savedToken);
+
+      // If user is shop owner, redirect to shop registration
+      if (userRole === 'shop_owner') {
+        Alert.alert(
+          "Account Created!",
+          "Now let's set up your shop.",
+          [
+            {
+              text: "Continue",
+              onPress: () => router.replace("/(auth)/shop-register"),
+            },
+          ]
+        );
+      } else {
+        // For regular users, go to login
+        Alert.alert(
+          "Registration Successful",
+          "Your account has been created successfully!",
+          [
+            {
+              text: "OK",
+              onPress: () => router.replace("/(main)/home"),
+            },
+          ]
+        );
+      }
+    } catch (error: any) {
+      // Handle different error types
+      if (error.status === 400) {
+        // Validation error or duplicate user
+        Alert.alert(
+          "Registration Failed",
+          error.message || "Email or username already exists"
+        );
+      } else if (error.status === 0) {
+        Alert.alert("Network Error", "Please check your internet connection");
+      } else {
+        Alert.alert(
+          "Registration Failed",
+          error.message || "An error occurred during registration. Please try again."
+        );
+      }
     } finally {
       setIsLoading(false);
     }
