@@ -17,6 +17,7 @@ const generateToken = (id) => {
  */
 const register = async (req, res) => {
     try {
+        console.log("/register")
         const { username, email, password, fullName, phone, role } = req.body;
 
         // Check if user exists
@@ -57,6 +58,7 @@ const register = async (req, res) => {
  */
 const login = async (req, res) => {
     try {
+        console.log("/login")
         const { email, password } = req.body;
 
         // Validate input
@@ -107,7 +109,9 @@ const login = async (req, res) => {
  */
 const getMe = async (req, res) => {
     try {
+        console.log("/getMe")
         const user = await User.findById(req.user._id).populate('shopId');
+        console.log(user);
         res.json({ user: user.toPublicJSON() });
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
@@ -119,15 +123,30 @@ const getMe = async (req, res) => {
  * @route   PUT /api/auth/profile
  * @access  Private
  */
+/**
+ * @desc    Update user profile
+ * @route   PUT /api/auth/profile
+ * @access  Private
+ */
 const updateProfile = async (req, res) => {
     try {
-        const { fullName, phone, username } = req.body;
+        console.log("/updateProfile")
+        const { fullName, phone, username, bio, location } = req.body;
 
         const user = await User.findById(req.user._id);
 
         if (fullName) user.fullName = fullName;
         if (phone) user.phone = phone;
-        if (username) user.username = username;
+        if (username) {
+            // Check if username is taken by another user
+            const existingUser = await User.findOne({ username, _id: { $ne: user._id } });
+            if (existingUser) {
+                return res.status(400).json({ message: 'Username is already taken' });
+            }
+            user.username = username;
+        }
+        if (bio !== undefined) user.bio = bio;
+        if (location !== undefined) user.location = location;
 
         await user.save();
 
@@ -147,6 +166,7 @@ const updateProfile = async (req, res) => {
  */
 const changePassword = async (req, res) => {
     try {
+        console.log("/changePassword")
         const { currentPassword, newPassword } = req.body;
 
         if (!currentPassword || !newPassword) {
@@ -178,6 +198,7 @@ const changePassword = async (req, res) => {
  */
 const uploadAvatar = async (req, res) => {
     try {
+        console.log("/uploadAvatar");
         if (!req.file) {
             return res.status(400).json({ message: 'Please upload an image' });
         }
@@ -188,25 +209,36 @@ const uploadAvatar = async (req, res) => {
         const b64 = Buffer.from(req.file.buffer).toString('base64');
         const dataURI = `data:${req.file.mimetype};base64,${b64}`;
 
+        const user = await User.findById(req.user._id);
+
+        // Delete old profile image if exists
+        if (user.profileImage && user.profileImage.publicId) {
+            try {
+                console.log(`Deleting old profile image: ${user.profileImage.publicId}`);
+                await deleteImage(user.profileImage.publicId);
+            } catch (deleteError) {
+                console.error("Error deleting old profile image:", deleteError);
+                // Continue with upload even if delete fails
+            }
+        }
+
         // Upload to Cloudinary
         const result = await uploadImage(dataURI, 'avatars');
 
-        const user = await User.findById(req.user._id);
-
-        // Delete old avatar if exists
-        if (user.avatar?.publicId) {
-            await deleteImage(user.avatar.publicId);
-        }
-
-        // Update user avatar
-        user.avatar = result;
+        // Update user profile image
+        user.profileImage = {
+            url: result.secure_url || result.url,
+            publicId: result.public_id
+        };
         await user.save();
 
         res.json({
-            message: 'Avatar uploaded successfully',
-            avatar: result.url
+            message: 'Profile image uploaded successfully',
+            profileImage: user.profileImage.url,
+            user: user.toPublicJSON()
         });
     } catch (error) {
+        console.error("Upload error:", error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 };

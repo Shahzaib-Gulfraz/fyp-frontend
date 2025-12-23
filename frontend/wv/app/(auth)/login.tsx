@@ -26,6 +26,7 @@ import {
   Inter_600SemiBold,
 } from "@expo-google-fonts/inter";
 import { MontserratAlternates_700Bold } from "@expo-google-fonts/montserrat-alternates";
+import Toast from "react-native-toast-message";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -111,18 +112,47 @@ export default function LoginScreen() {
     if (!validateForm()) return;
 
     setIsLoading(true);
+    console.log('🔵 Login started with email:', email);
+
     try {
       // Import authService dynamically to avoid circular dependencies
+      console.log('🔵 Importing authService...');
       const { authService } = await import('../../src/api');
+      console.log('✅ authService imported successfully');
 
       // Call the real API
+      console.log('🔵 Calling login API...');
       const response = await authService.login(email, password);
+      console.log('✅ Login API response:', JSON.stringify(response, null, 2));
 
-      console.log('Login successful:', response.user);
+      // Show success toast
+      Toast.show({
+        type: 'success',
+        text1: 'Login Successful',
+        text2: `Welcome back, ${response.user?.name || 'User'}!`,
+        position: 'top',
+        visibilityTime: 3000,
+      });
+      console.log('✅ Toast displayed');
+
+      // Wait a bit to ensure token is saved to AsyncStorage
+      console.log('🔵 Waiting for token to be saved...');
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      // Verify token was saved
+      const tokenSaved = await authService.isAuthenticated();
+      console.log('🔍 Token saved verification:', tokenSaved);
 
       // Navigate to home screen
+      console.log('🔵 Attempting navigation to /(main)/home...');
       router.replace("/(main)/home");
+      console.log('✅ Navigation called');
     } catch (error: any) {
+      console.error('❌ Login error:', error);
+      console.error('❌ Error status:', error.status);
+      console.error('❌ Error message:', error.message);
+      console.error('❌ Full error:', JSON.stringify(error, null, 2));
+
       // Handle different error types
       if (error.status === 401) {
         Alert.alert("Login Failed", "Invalid email or password");
@@ -133,6 +163,7 @@ export default function LoginScreen() {
       }
     } finally {
       setIsLoading(false);
+      console.log('🔵 Login process completed, loading set to false');
     }
   };
 
@@ -269,6 +300,7 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+      <Toast />
     </SafeAreaView>
   );
 }

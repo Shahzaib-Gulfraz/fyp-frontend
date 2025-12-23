@@ -1,142 +1,120 @@
-// app/(main)/profile/edit.tsx
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  ScrollView,
-  TouchableOpacity,
   StyleSheet,
-  Alert,
   TextInput,
-  KeyboardAvoidingView,
+  TouchableOpacity,
+  ScrollView,
+  Alert,
+  ActivityIndicator,
+  Image,
   Platform,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { StatusBar } from "expo-status-bar";
-import { useRouter } from "expo-router";
-import {
-  Mail,
-  MapPin,
-  Globe,
-  Instagram,
-  Twitter,
-  Check,
-  X,
-  User,
-  Briefcase,
-  Heart,
-} from "lucide-react-native";
-import React, { useState, useRef, useEffect } from "react";
-import { useTheme } from "../../../src/context/ThemeContext";
+  KeyboardAvoidingView,
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
+import { useUser } from '../../../src/context/UserContext';
+import Toast from 'react-native-toast-message';
 
 export default function EditProfileScreen() {
-  const { theme, isDark } = useTheme();
-  const styles = getStyles(theme.colors);
-  
   const router = useRouter();
-  
-  // Initial user data
-  const [userData, setUserData] = useState({
-    username: "alexjohnson",
-    name: "Alex Johnson",
-    bio: "Fashion enthusiast • Virtual try-on expert • Always shopping for the perfect fit 👗",
-    email: "alex@wearvirtually.com",
-    location: "New York, USA",
-    website: "https://alexjohnson.com",
-    instagram: "@alexjohnson",
-    twitter: "@alexj",
-  });
-  
+  const { user, refreshProfile } = useUser();
+
   const [isLoading, setIsLoading] = useState(false);
   const [changesMade, setChangesMade] = useState(false);
-  const [originalData, setOriginalData] = useState({ ...userData });
 
-  // Ref to track initial load
-  const initialLoad = useRef(true);
+  // Form state
+  const [userData, setUserData] = useState({
+    username: '',
+    name: '', // This maps to fullName
+    bio: '',
+    email: '',
+    location: '',
+    phone: '',
+  });
+
+  // Original data for comparison
+  const [originalData, setOriginalData] = useState({
+    username: '',
+    name: '',
+    bio: '',
+    email: '',
+    location: '',
+    phone: '',
+  });
+
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+
+  const [isFetchingData, setIsFetchingData] = useState(true);
+
+  // Initialize data from context and fetch latest
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        await refreshProfile();
+      } catch (error) {
+        console.error('Failed to refresh profile:', error);
+        Toast.show({
+          type: 'error',
+          text1: 'Failed to load latest profile data',
+        });
+      } finally {
+        setIsFetchingData(false);
+      }
+    };
+    loadData();
+  }, []);
+
+  // Update form when user data changes
+  useEffect(() => {
+    if (user) {
+      const initialData = {
+        username: user.username || '',
+        name: user.fullName || '', // Map fullName to name field
+        bio: user.bio || '',
+        email: user.email || '',
+        location: user.location || '',
+        phone: user.phone || '',
+      };
+
+      setUserData(initialData);
+      setOriginalData(initialData);
+      setProfileImage(user.profileImage || null);
+    }
+  }, [user]);
 
   // Check for changes
   useEffect(() => {
-    if (initialLoad.current) {
-      initialLoad.current = false;
-      return;
-    }
-    
-    const hasChanged = 
+    const hasChanges =
       userData.username !== originalData.username ||
       userData.name !== originalData.name ||
       userData.bio !== originalData.bio ||
-      userData.email !== originalData.email ||
       userData.location !== originalData.location ||
-      userData.website !== originalData.website ||
-      userData.instagram !== originalData.instagram ||
-      userData.twitter !== originalData.twitter;
-    
-    setChangesMade(hasChanged);
-  }, [userData]);
+      userData.phone !== originalData.phone;
 
-  // Handle input changes
-  const handleInputChange = (field: string, value: string) => {
-    setUserData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
+    setChangesMade(hasChanges);
+  }, [userData, originalData]);
 
-  // Validate form
-  const validateForm = () => {
-    if (!userData.username.trim()) {
-      Alert.alert("Error", "Username is required");
-      return false;
-    }
-    if (!userData.email.trim() || !userData.email.includes('@')) {
-      Alert.alert("Error", "Please enter a valid email address");
-      return false;
-    }
-    return true;
-  };
+  if (isFetchingData) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#000" />
+        <Text style={{ marginTop: 10, color: '#666' }}>Loading latest profile...</Text>
+      </View>
+    );
+  }
 
-  // Save profile changes
-  const handleSave = async () => {
-    if (!validateForm()) return;
-    
-    setIsLoading(true);
-    
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Update original data
-      setOriginalData({ ...userData });
-      setChangesMade(false);
-      
-      Alert.alert(
-        "Success",
-        "Profile updated successfully!",
-        [{ text: "OK", onPress: () => router.back() }]
-      );
-    } catch (error) {
-      Alert.alert("Error", "Failed to update profile. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Discard changes and go back to profile
-  const handleDiscard = () => {
+  const handleBack = () => {
     if (changesMade) {
       Alert.alert(
-        "Discard Changes",
-        "Are you sure you want to discard all changes?",
+        'Discard Changes?',
+        'You have unsaved changes. Are you sure you want to discard them?',
         [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Discard",
-            style: "destructive",
-            onPress: () => {
-              setUserData({ ...originalData });
-              setChangesMade(false);
-              router.back();
-            }
-          }
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Discard', style: 'destructive', onPress: () => router.back() }
         ]
       );
     } else {
@@ -144,385 +122,348 @@ export default function EditProfileScreen() {
     }
   };
 
-  // Handle X button press - go back to profile
-  const handleXPress = () => {
-    handleDiscard();
+  const handleInputChange = (field: string, value: string) => {
+    setUserData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Sorry, we need camera roll permissions to make this work!');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0].uri) {
+      handleImageUpload(result.assets[0].uri);
+    }
+  };
+
+  const handleImageUpload = async (uri: string) => {
+    setIsLoading(true);
+    try {
+      const { authService } = await import('../../../src/api');
+
+      // Upload to Cloudinary via backend
+      const response = await authService.uploadAvatar(uri);
+
+      // Update local state
+      setProfileImage(response.profileImage);
+
+      // Refresh context to update app-wide
+      await refreshProfile();
+
+      Toast.show({
+        type: 'success',
+        text1: 'Profile photo updated',
+      });
+    } catch (error: any) {
+      console.error('Image upload error:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Failed to upload image',
+        text2: error.message || 'Please try again',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const validateForm = () => {
+    if (!userData.username.trim()) {
+      Toast.show({ type: 'error', text1: 'Username is required' });
+      return false;
+    }
+    if (!userData.name.trim()) {
+      Toast.show({ type: 'error', text1: 'Name is required' });
+      return false;
+    }
+    return true;
+  };
+
+  const handleSave = async () => {
+    if (!validateForm()) return;
+
+    setIsLoading(true);
+    try {
+      const { authService } = await import('../../../src/api');
+
+      // Prepare payload
+      const updatePayload = {
+        username: userData.username,
+        fullName: userData.name, // Map back to fullName
+        bio: userData.bio,
+        location: userData.location,
+        phone: userData.phone,
+      };
+
+      await authService.updateProfile(updatePayload);
+
+      // Update original data to current
+      setOriginalData({ ...userData });
+      setChangesMade(false);
+
+      // Refresh global user state
+      await refreshProfile();
+
+      Toast.show({
+        type: 'success',
+        text1: 'Profile updated successfully',
+      });
+
+      // Optional: Go back after save
+      // router.back();
+    } catch (error: any) {
+      console.error('Profile update error:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Failed to update profile',
+        text2: error.message || 'Please try again',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar style={isDark ? "light" : "dark"} />
-      
-      {/* Header */}
       <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={handleXPress}
-          >
-            <X size={24} color={theme.colors.text} />
-          </TouchableOpacity>
-          
-          <Text style={styles.headerTitle}>Edit Profile</Text>
-          
-          <TouchableOpacity
-            style={[
-              styles.saveButton,
-              (!changesMade || isLoading) && styles.saveButtonDisabled
-            ]}
-            onPress={handleSave}
-            disabled={!changesMade || isLoading}
-          >
-            {isLoading ? (
-              <Text style={styles.saveButtonText}>Saving...</Text>
-            ) : (
-              <Text style={styles.saveButtonText}>Save</Text>
-            )}
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#000" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Edit Profile</Text>
+        <TouchableOpacity
+          onPress={handleSave}
+          style={[styles.saveButtonHeader, !changesMade && styles.disabledButton]}
+          disabled={!changesMade || isLoading}
+        >
+          {isLoading ? (
+            <ActivityIndicator size="small" color="#000" />
+          ) : (
+            <Text style={[styles.saveButtonText, !changesMade && styles.disabledButtonText]}>Save</Text>
+          )}
+        </TouchableOpacity>
       </View>
 
       <KeyboardAvoidingView
-        style={styles.keyboardAvoid}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
       >
-        <ScrollView
-          style={styles.scrollView}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-        >
-
-          {/* Form Fields */}
-          <View style={styles.formContainer}>
-            {/* Username */}
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>
-                <Text style={styles.required}>* </Text>
-                Username
-              </Text>
-              <View style={styles.inputContainer}>
-                <User size={20} color="#999" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  value={userData.username}
-                  onChangeText={(text) => handleInputChange('username', text)}
-                  placeholder="Enter username"
-                  placeholderTextColor="#999"
-                />
-              </View>
-            </View>
-
-            {/* Name */}
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>
-                <Text style={styles.required}>* </Text>
-                Name
-              </Text>
-              <View style={styles.inputContainer}>
-                <User size={20} color="#999" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  value={userData.name}
-                  onChangeText={(text) => handleInputChange('name', text)}
-                  placeholder="Enter your full name"
-                  placeholderTextColor="#999"
-                />
-              </View>
-            </View>
-
-            {/* Bio */}
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Bio</Text>
-              <View style={styles.textAreaContainer}>
-                <TextInput
-                  style={styles.textArea}
-                  value={userData.bio}
-                  onChangeText={(text) => handleInputChange('bio', text)}
-                  placeholder="Tell us about yourself..."
-                  placeholderTextColor="#999"
-                  multiline
-                  numberOfLines={4}
-                  textAlignVertical="top"
-                  maxLength={200}
-                />
-                <Text style={styles.charCount}>
-                  {userData.bio.length}/200
-                </Text>
-              </View>
-            </View>
-
-            {/* Location */}
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Location</Text>
-              <View style={styles.inputContainer}>
-                <MapPin size={20} color="#999" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  value={userData.location}
-                  onChangeText={(text) => handleInputChange('location', text)}
-                  placeholder="Enter your location"
-                  placeholderTextColor="#999"
-                />
-              </View>
-            </View>
-
-            {/* Email */}
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>
-                <Text style={styles.required}>* </Text>
-                Email
-              </Text>
-              <View style={styles.inputContainer}>
-                <Mail size={20} color="#999" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  value={userData.email}
-                  onChangeText={(text) => handleInputChange('email', text)}
-                  placeholder="Enter your email"
-                  placeholderTextColor="#999"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-              </View>
-            </View>
-
-            {/* Social Links Section */}
-            <Text style={styles.sectionTitle}>Social Links</Text>
-
-            {/* Website */}
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Website</Text>
-              <View style={styles.inputContainer}>
-                <Globe size={20} color="#999" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  value={userData.website}
-                  onChangeText={(text) => handleInputChange('website', text)}
-                  placeholder="https://example.com"
-                  placeholderTextColor="#999"
-                  autoCapitalize="none"
-                />
-              </View>
-            </View>
-
-            {/* Instagram */}
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Instagram</Text>
-              <View style={styles.inputContainer}>
-                <Instagram size={20} color="#999" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  value={userData.instagram}
-                  onChangeText={(text) => handleInputChange('instagram', text)}
-                  placeholder="@username"
-                  placeholderTextColor="#999"
-                  autoCapitalize="none"
-                />
-              </View>
-            </View>
-
-            {/* Twitter/X */}
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Twitter/X</Text>
-              <View style={styles.inputContainer}>
-                <Twitter size={20} color="#999" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  value={userData.twitter}
-                  onChangeText={(text) => handleInputChange('twitter', text)}
-                  placeholder="@username"
-                  placeholderTextColor="#999"
-                  autoCapitalize="none"
-                />
-              </View>
-            </View>
-
-            {/* Additional Info Section */}
-            <Text style={styles.sectionTitle}>Additional Information</Text>
-
-            {/* Occupation */}
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Occupation</Text>
-              <View style={styles.inputContainer}>
-                <Briefcase size={20} color="#999" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="What do you do?"
-                  placeholderTextColor="#999"
-                />
-              </View>
-            </View>
-
-            {/* Interests */}
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Interests</Text>
-              <View style={styles.inputContainer}>
-                <Heart size={20} color="#999" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Your interests (comma separated)"
-                  placeholderTextColor="#999"
-                />
-              </View>
-            </View>
-
-            {/* Bottom Save Button */}
-            {changesMade && (
-              <TouchableOpacity
-                style={styles.bottomSaveButton}
-                onPress={handleSave}
-                disabled={isLoading}
-              >
-                <View style={styles.bottomSaveContent}>
-                  <Check size={20} color="#FFFFFF" />
-                  <Text style={styles.bottomSaveText}>
-                    {isLoading ? "Saving..." : "Save Changes"}
-                  </Text>
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          <View style={styles.imageSection}>
+            <TouchableOpacity onPress={pickImage} style={styles.imageContainer}>
+              {profileImage ? (
+                <Image source={{ uri: profileImage }} style={styles.profileImage} />
+              ) : (
+                <View style={[styles.profileImage, styles.placeholderImage]}>
+                  <Ionicons name="person" size={40} color="#999" />
                 </View>
-              </TouchableOpacity>
-            )}
+              )}
+              <View style={styles.editIconContainer}>
+                <Ionicons name="camera" size={20} color="#fff" />
+              </View>
+            </TouchableOpacity>
+            <Text style={styles.changePhotoText}>Change Profile Photo</Text>
           </View>
+
+          <View style={styles.formSection}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Name</Text>
+              <TextInput
+                style={styles.input}
+                value={userData.name}
+                onChangeText={(text) => handleInputChange('name', text)}
+                placeholder="Your full name"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Username</Text>
+              <TextInput
+                style={styles.input}
+                value={userData.username}
+                onChangeText={(text) => handleInputChange('username', text)}
+                placeholder="Username"
+                autoCapitalize="none"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Bio</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={userData.bio}
+                onChangeText={(text) => handleInputChange('bio', text)}
+                placeholder="Write a short bio..."
+                multiline
+                numberOfLines={4}
+                maxLength={150}
+              />
+              <Text style={styles.charCount}>{userData.bio.length}/150</Text>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Location</Text>
+              <TextInput
+                style={styles.input}
+                value={userData.location}
+                onChangeText={(text) => handleInputChange('location', text)}
+                placeholder="Your location"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Phone</Text>
+              <TextInput
+                style={styles.input}
+                value={userData.phone}
+                onChangeText={(text) => handleInputChange('phone', text)}
+                placeholder="Phone number"
+                keyboardType="phone-pad"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Email</Text>
+              <TextInput
+                style={[styles.input, styles.disabledInput]}
+                value={userData.email}
+                editable={false}
+              />
+              <Text style={styles.helperText}>Email cannot be changed</Text>
+            </View>
+          </View>
+
+          <View style={styles.spacer} />
         </ScrollView>
       </KeyboardAvoidingView>
+      <Toast />
     </SafeAreaView>
   );
 }
 
-const getStyles = (colors: any) =>
-  StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: colors.background,
-    },
-    keyboardAvoid: {
-      flex: 1,
-    },
-    header: {
-      backgroundColor: colors.surface,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-      paddingHorizontal: 20,
-      paddingVertical: 15,
-    },
-    headerContent: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-    },
-    backButton: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: "#F8F9FA",
-      justifyContent: "center",
-      alignItems: "center",
-      borderWidth: 1,
-      borderColor: "#F0F0F0",
-    },
-    headerTitle: {
-      fontSize: 18,
-      fontWeight: "700",
-      color: colors.text,
-    },
-    saveButton: {
-      backgroundColor: "#00BCD4",
-      paddingHorizontal: 20,
-      paddingVertical: 8,
-      borderRadius: 20,
-    },
-    saveButtonDisabled: {
-      backgroundColor: "#CCCCCC",
-      opacity: 0.7,
-    },
-    saveButtonText: {
-      fontSize: 14,
-      fontWeight: "600",
-      color: "#FFFFFF",
-    },
-    scrollView: {
-      flex: 1,
-    },
-    scrollContent: {
-      paddingBottom: 40,
-    },
-    formContainer: {
-      marginTop: 20,
-      paddingHorizontal: 20,
-    },
-    formGroup: {
-      marginBottom: 20,
-    },
-    formLabel: {
-      fontSize: 14,
-      fontWeight: "600",
-      color: colors.text,
-      marginBottom: 8,
-    },
-    required: {
-      color: "#FF6B6B",
-    },
-    inputContainer: {
-      flexDirection: "row",
-      alignItems: "center",
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 12,
-      paddingHorizontal: 16,
-    },
-    inputIcon: {
-      marginRight: 12,
-    },
-    input: {
-      flex: 1,
-      fontSize: 16,
-      color: colors.text,
-      paddingVertical: 14,
-    },
-    textAreaContainer: {
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 12,
-      padding: 16,
-      position: "relative",
-    },
-    textArea: {
-      fontSize: 16,
-      color: colors.text,
-      minHeight: 100,
-    },
-    charCount: {
-      position: "absolute",
-      bottom: 8,
-      right: 12,
-      fontSize: 12,
-      color: "#999",
-    },
-    sectionTitle: {
-      fontSize: 16,
-      fontWeight: "700",
-      color: colors.text,
-      marginTop: 10,
-      marginBottom: 20,
-    },
-    bottomSaveButton: {
-      backgroundColor: "#00BCD4",
-      borderRadius: 12,
-      paddingVertical: 16,
-      marginTop: 30,
-      marginBottom: 20,
-    },
-    bottomSaveContent: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 8,
-    },
-    bottomSaveText: {
-      fontSize: 16,
-      fontWeight: "600",
-      color: "#FFFFFF",
-    },
-  });
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  backButton: {
+    padding: 4,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  saveButtonHeader: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  saveButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000',
+  },
+  disabledButtonText: {
+    color: '#ccc',
+  },
+  disabledButton: {
+    // opacity: 0.5,
+  },
+  content: {
+    flex: 1,
+  },
+  imageSection: {
+    alignItems: 'center',
+    paddingVertical: 24,
+  },
+  imageContainer: {
+    position: 'relative',
+    marginBottom: 12,
+  },
+  profileImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+  },
+  placeholderImage: {
+    backgroundColor: '#f5f5f5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  editIconContainer: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#000',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  changePhotoText: {
+    color: '#007AFF',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  formSection: {
+    padding: 20,
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#666',
+    marginBottom: 8,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 16,
+    color: '#000',
+  },
+  textArea: {
+    height: 100,
+    textAlignVertical: 'top',
+  },
+  disabledInput: {
+    backgroundColor: '#f9f9f9',
+    color: '#999',
+  },
+  helperText: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 4,
+  },
+  charCount: {
+    fontSize: 12,
+    color: '#999',
+    textAlign: 'right',
+    marginTop: 4,
+  },
+  spacer: {
+    height: 40,
+  },
+});

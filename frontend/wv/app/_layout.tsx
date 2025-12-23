@@ -2,62 +2,45 @@ import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { ThemeProvider, useTheme } from "../src/context/ThemeContext";
 import { UserProvider } from "../src/context/UserContext";
-import { useEffect, useState } from "react";
+import { AuthProvider, useAuth } from "../src/context/AuthContext";
+import React from "react";
 import { View, ActivityIndicator, Text, StyleSheet } from "react-native";
 
 function RootLayoutNav() {
   const { isDark } = useTheme();
   const router = useRouter();
   const segments = useSegments();
-  const [isLoading, setIsLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { isAuthenticated, isLoading, checkAuth } = useAuth();
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
+  // Re-check auth when navigating to main group
+  React.useEffect(() => {
+    const inMainGroup = segments[0] === "(main)";
 
-  useEffect(() => {
+    if (inMainGroup) {
+      console.log('🔄 Navigating to main group, re-checking auth...');
+      checkAuth();
+    }
+  }, [segments]);
+
+  React.useEffect(() => {
     if (isLoading) return;
 
     const inAuthGroup = segments[0] === "(auth)";
 
+    console.log('🔍 Auth check - isAuthenticated:', isAuthenticated, 'inAuthGroup:', inAuthGroup, 'segments:', segments);
+
     if (!isAuthenticated && !inAuthGroup) {
       // Redirect to login if not authenticated
+      console.log('🔄 Redirecting to login (not authenticated)');
       router.replace("/(auth)/login");
     } else if (isAuthenticated && inAuthGroup) {
       // Redirect to home if authenticated and in auth screens
+      console.log('🔄 Redirecting to home (authenticated in auth group)');
       router.replace("/(main)/home");
     }
   }, [isAuthenticated, segments, isLoading]);
 
-  const checkAuth = async () => {
-    try {
-      // Import authService dynamically
-      const { authService } = await import("../src/api");
 
-      // Check if token exists
-      const authenticated = await authService.isAuthenticated();
-
-      if (authenticated) {
-        // Validate token with backend
-        try {
-          await authService.getProfile();
-          setIsAuthenticated(true);
-        } catch (error) {
-          // Token invalid, clear storage
-          await authService.logout();
-          setIsAuthenticated(false);
-        }
-      } else {
-        setIsAuthenticated(false);
-      }
-    } catch (error) {
-      console.error("Auth check error:", error);
-      setIsAuthenticated(false);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   if (isLoading) {
     return (
@@ -89,11 +72,13 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   return (
-    <UserProvider>
-      <ThemeProvider>
-        <RootLayoutNav />
-      </ThemeProvider>
-    </UserProvider>
+    <AuthProvider>
+      <UserProvider>
+        <ThemeProvider>
+          <RootLayoutNav />
+        </ThemeProvider>
+      </UserProvider>
+    </AuthProvider>
   );
 }
 

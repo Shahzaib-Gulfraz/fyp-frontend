@@ -46,7 +46,17 @@ const userSchema = new mongoose.Schema({
         trim: true,
         match: [/^[\d\s\-\+\(\)]{10,15}$/, 'Please enter a valid phone number']
     },
-    avatar: {
+    bio: {
+        type: String,
+        trim: true,
+        maxlength: [500, 'Bio cannot exceed 500 characters']
+    },
+    location: {
+        type: String,
+        trim: true,
+        maxlength: [100, 'Location cannot exceed 100 characters']
+    },
+    profileImage: {
         url: String, // Cloudinary URL
         publicId: String // Cloudinary public ID for deletion
     },
@@ -104,10 +114,12 @@ userSchema.methods.toPublicJSON = function () {
         email: this.email,
         fullName: this.fullName,
         phone: this.phone,
-        avatar: this.avatar?.url,
+        profileImage: this.profileImage?.url,
         role: this.role,
         isVerified: this.isVerified,
         shopId: this.shopId,
+        bio: this.bio,
+        location: this.location,
         createdAt: this.createdAt
     };
 };

@@ -21,11 +21,11 @@ export default function UserProfileScreen() {
     const [isLoading, setIsLoading] = useState(true);
     const [isUpdating, setIsUpdating] = useState(false);
     const [isChangingPassword, setIsChangingPassword] = useState(false);
-    const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+    const [isUploadingImage, setIsUploadingImage] = useState(false);
 
     // User data
     const [userData, setUserData] = useState<any>(null);
-    const [avatarUri, setAvatarUri] = useState<string | null>(null);
+    const [profileImageUri, setProfileImageUri] = useState<string | null>(null);
 
     // Edit mode
     const [isEditing, setIsEditing] = useState(false);
@@ -33,6 +33,8 @@ export default function UserProfileScreen() {
         fullName: '',
         username: '',
         phone: '',
+        bio: '',
+        location: '',
     });
 
     // Password change
@@ -66,10 +68,12 @@ export default function UserProfileScreen() {
                 fullName: response.user.fullName || '',
                 username: response.user.username || '',
                 phone: response.user.phone || '',
+                bio: response.user.bio || '',
+                location: response.user.location || '',
             });
 
-            if (response.user.avatar) {
-                setAvatarUri(response.user.avatar);
+            if (response.user.profileImage) {
+                setProfileImageUri(response.user.profileImage);
             }
         } catch (error: any) {
             console.error('Error loading profile:', error);
@@ -137,7 +141,7 @@ export default function UserProfileScreen() {
         }
     };
 
-    const handlePickAvatar = async () => {
+    const handlePickImage = async () => {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
             Alert.alert('Permission needed', 'Please allow access to your photos');
@@ -152,24 +156,24 @@ export default function UserProfileScreen() {
         });
 
         if (!result.canceled && result.assets[0]) {
-            await handleUploadAvatar(result.assets[0].uri);
+            await handleUploadImage(result.assets[0].uri);
         }
     };
 
-    const handleUploadAvatar = async (uri: string) => {
-        setIsUploadingAvatar(true);
+    const handleUploadImage = async (uri: string) => {
+        setIsUploadingImage(true);
         try {
             const { authService } = await import('../../src/api');
 
             const response = await authService.uploadAvatar(uri);
 
-            setAvatarUri(response.avatar);
-            Alert.alert('Success', 'Avatar uploaded successfully');
+            setProfileImageUri(response.profileImage);
+            Alert.alert('Success', 'Profile image uploaded successfully');
             await loadUserProfile();
         } catch (error: any) {
-            Alert.alert('Error', error.message || 'Failed to upload avatar');
+            Alert.alert('Error', error.message || 'Failed to upload image');
         } finally {
-            setIsUploadingAvatar(false);
+            setIsUploadingImage(false);
         }
     };
 
@@ -243,15 +247,15 @@ export default function UserProfileScreen() {
             <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
                 {/* Avatar Section */}
                 <View style={styles.avatarSection}>
-                    <TouchableOpacity onPress={handlePickAvatar} style={styles.avatarContainer}>
-                        {avatarUri ? (
-                            <Image source={{ uri: avatarUri }} style={styles.avatar} />
+                    <TouchableOpacity onPress={handlePickImage} style={styles.avatarContainer}>
+                        {profileImageUri ? (
+                            <Image source={{ uri: profileImageUri }} style={styles.avatar} />
                         ) : (
                             <View style={styles.avatarPlaceholder}>
                                 <Ionicons name="person" size={50} color="#999" />
                             </View>
                         )}
-                        {isUploadingAvatar && (
+                        {isUploadingImage && (
                             <View style={styles.avatarOverlay}>
                                 <ActivityIndicator color="#fff" />
                             </View>
@@ -290,6 +294,31 @@ export default function UserProfileScreen() {
                             onChangeText={(text) => setEditData({ ...editData, username: text })}
                             editable={isEditing}
                             placeholder="Enter your username"
+                        />
+                    </View>
+
+                    <View style={styles.formGroup}>
+                        <Text style={styles.label}>Bio</Text>
+                        <TextInput
+                            style={[styles.textArea, !isEditing && styles.inputDisabled]}
+                            value={isEditing ? editData.bio : userData.bio || ''}
+                            onChangeText={(text) => setEditData({ ...editData, bio: text })}
+                            editable={isEditing}
+                            placeholder="Tell us about yourself"
+                            multiline
+                            numberOfLines={3}
+                            textAlignVertical="top"
+                        />
+                    </View>
+
+                    <View style={styles.formGroup}>
+                        <Text style={styles.label}>Location</Text>
+                        <TextInput
+                            style={[styles.input, !isEditing && styles.inputDisabled]}
+                            value={isEditing ? editData.location : userData.location || ''}
+                            onChangeText={(text) => setEditData({ ...editData, location: text })}
+                            editable={isEditing}
+                            placeholder="Where are you based?"
                         />
                     </View>
 
@@ -557,13 +586,24 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#E0E0E0',
     },
+    textArea: {
+        backgroundColor: '#F8F9FA',
+        borderRadius: 12,
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        fontSize: 16,
+        color: '#1A1A1A',
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+        minHeight: 100,
+    },
     inputDisabled: {
         backgroundColor: '#F5F5F5',
         color: '#999',
     },
     helperText: {
         fontSize: 12,
-        color: '#999',
+        color: '#666',
         marginTop: 4,
     },
     saveButton: {

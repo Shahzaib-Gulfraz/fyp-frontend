@@ -10,8 +10,10 @@ interface User {
   role: UserRole;
   fullName?: string;
   phone?: string;
-  avatar?: string;
+  profileImage?: string;
   shopId?: string; // For shop owners
+  bio?: string;
+  location?: string;
 }
 
 interface UserContextType {
@@ -20,6 +22,7 @@ interface UserContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   updateUser: (userData: Partial<User>) => void;
+  refreshProfile: () => Promise<void>;
   switchToShopOwner: () => void;
   switchToUser: () => void;
 }
@@ -33,10 +36,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
   // Mock login function - replace with actual API call
   const login = async (email: string, password: string) => {
     setIsLoading(true);
-    
+
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
     // Mock user data - in real app, this would come from your API
     const mockUser: User = {
       id: '1',
@@ -45,12 +48,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
       role: email.includes('shop') ? 'shop_owner' : 'user',
       fullName: email.includes('shop') ? 'Fashion Hub Boutique' : 'John Doe',
       phone: '+1 (555) 123-4567',
-      avatar: email.includes('shop') 
+      profileImage: email.includes('shop')
         ? 'https://images.unsplash.com/photo-1562157873-818bc0726f68?w=400'
         : 'https://images.unsplash.com/photo-1494790108755-2616b786d4d9?w=400',
       shopId: email.includes('shop') ? 'shop_123' : undefined,
+      bio: 'Fashion enthusiast • Virtual try-on expert',
+      location: 'New York, USA',
     };
-    
+
     setUser(mockUser);
     setIsLoading(false);
   };
@@ -61,6 +66,34 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   const updateUser = (userData: Partial<User>) => {
     setUser(prev => prev ? { ...prev, ...userData } : null);
+  };
+
+  const refreshProfile = async () => {
+    try {
+      // In a real implementation, this would call api.get('/auth/me')
+      // For now, we'll try to use the authService if available
+      const { authService } = await import('../api');
+      try {
+        const userData = await authService.getProfile();
+        // Check if userData is nested under 'user' key or is the user object directly
+        const freshUser = userData.user || userData;
+
+        setUser(prev => {
+          // If we have fresh data, use it to populate user state
+          return {
+            ...(prev || {}),
+            ...freshUser,
+            // Ensure ID is consistent if backend returns _id
+            id: freshUser.id || freshUser._id || (prev ? prev.id : '')
+          };
+        });
+        console.log("Profile refreshed successfully");
+      } catch (err) {
+        console.error("Failed to fetch fresh profile from API:", err);
+      }
+    } catch (e) {
+      console.log("Auth service not available yet or error importing");
+    }
   };
 
   const switchToShopOwner = () => {
@@ -90,6 +123,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       login,
       logout,
       updateUser,
+      refreshProfile,
       switchToShopOwner,
       switchToUser,
     }}>
