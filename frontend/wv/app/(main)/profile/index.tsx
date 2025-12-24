@@ -8,6 +8,7 @@ import {
   Animated,
   Dimensions,
   FlatList,
+  ActivityIndicator,
 } from "react-native";
 import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -32,9 +33,9 @@ import {
   Bookmark,
 } from "lucide-react-native";
 import React, { useState, useRef, useEffect } from "react";
-import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "../../../src/context/ThemeContext";
+import { useUser } from "../../../src/context/UserContext";
 
 const { width } = Dimensions.get("window");
 
@@ -80,12 +81,10 @@ const userPosts = [
 
 export default function ProfileScreen() {
   const { theme, toggleTheme, isDark } = useTheme();
+  const { user, refreshProfile, isLoading } = useUser();
   const styles = getStyles(theme.colors);
 
   const router = useRouter();
-  const [profileImage, setProfileImage] = useState(
-    "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&q=80"
-  );
   const [activeTab, setActiveTab] = useState("posts");
   const [hasPosts, setHasPosts] = useState(userPosts.length > 0);
 
@@ -93,6 +92,7 @@ export default function ProfileScreen() {
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
 
   useEffect(() => {
+    refreshProfile();
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -107,25 +107,6 @@ export default function ProfileScreen() {
       }),
     ]).start();
   }, []);
-
-  const handleImagePicker = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert("Permission needed", "Please allow access to your photos");
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      setProfileImage(result.assets[0].uri);
-    }
-  };
 
   const tabs = [
     { id: "posts", label: "Posts", icon: <Grid size={20} /> },
@@ -181,6 +162,20 @@ export default function ProfileScreen() {
     />
   );
 
+  // If user data is loading and we don't have it yet
+  if (!user && isLoading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+      </View>
+    );
+  }
+
+  // Fallback if user is null after loading (should invoke login)
+  if (!user) {
+    return null;
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style={isDark ? "light" : "dark"} />
@@ -190,7 +185,7 @@ export default function ProfileScreen() {
         <View style={styles.headerContent}>
           {/* Stylish Username */}
           <View style={styles.usernameContainer}>
-            <Text style={styles.usernameStylish}>𝔞𝔩𝔢𝔵𝔧𝔬𝔥𝔫𝔰𝔬𝔫</Text>
+            <Text style={styles.usernameStylish}>{user.username}</Text>
           </View>
 
           {/* Right Icons */}
@@ -229,14 +224,14 @@ export default function ProfileScreen() {
               ]}
             >
               <Image
-                source={{ uri: profileImage }}
+                source={user.profileImage ? { uri: user.profileImage } : { uri: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&q=80" }}
                 style={styles.profileImage}
                 contentFit="cover"
                 transition={300}
               />
               <TouchableOpacity
                 style={styles.cameraButton}
-                onPress={handleImagePicker}
+                onPress={() => router.push("/(main)/profile/edit")}
               >
                 <Camera size={14} color="#FFFFFF" />
               </TouchableOpacity>
@@ -260,21 +255,24 @@ export default function ProfileScreen() {
 
           {/* User Details */}
           <View style={styles.userDetails}>
-            <Text style={styles.userName}>Alex Johnson</Text>
-            <Text style={styles.userBio}>
-              Fashion enthusiast • Virtual try-on expert • Always shopping for
-              the perfect fit 👗
-            </Text>
+            <Text style={styles.userName}>{user.fullName}</Text>
+            {user.bio ? (
+              <Text style={styles.userBio}>
+                {user.bio}
+              </Text>
+            ) : null}
 
             <View style={styles.contactInfo}>
               <View style={styles.contactItem}>
                 <Mail size={14} color="#666666" />
-                <Text style={styles.contactText}>alex@wearvirtually.com</Text>
+                <Text style={styles.contactText}>{user.email}</Text>
               </View>
-              <View style={styles.contactItem}>
-                <MapPin size={14} color="#666666" />
-                <Text style={styles.contactText}>New York, USA</Text>
-              </View>
+              {user.location ? (
+                <View style={styles.contactItem}>
+                  <MapPin size={14} color="#666666" />
+                  <Text style={styles.contactText}>{user.location}</Text>
+                </View>
+              ) : null}
             </View>
           </View>
 

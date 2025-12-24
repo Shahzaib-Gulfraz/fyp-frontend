@@ -1,5 +1,6 @@
 // src/context/UserContext.tsx
 import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { useAuth } from './AuthContext';
 
 type UserRole = 'user' | 'shop_owner';
 
@@ -20,7 +21,7 @@ interface UserContextType {
   user: User | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   updateUser: (userData: Partial<User>) => void;
   refreshProfile: () => Promise<void>;
   switchToShopOwner: () => void;
@@ -30,6 +31,8 @@ interface UserContextType {
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export function UserProvider({ children }: { children: ReactNode }) {
+  const { setAuthenticated } = useAuth();
+
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -60,8 +63,17 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setIsLoading(false);
   };
 
-  const logout = () => {
-    setUser(null);
+  const logout = async () => {
+    try {
+      console.log('logout from context');
+      const { authService } = await import('../api');
+      await authService.logout();
+      setAuthenticated(false);
+    } catch (error) {
+      console.error('Error during context logout:', error);
+    } finally {
+      setUser(null);
+    }
   };
 
   const updateUser = (userData: Partial<User>) => {
