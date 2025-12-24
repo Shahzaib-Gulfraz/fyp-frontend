@@ -48,6 +48,7 @@ const authService = {
      */
     logout: async () => {
         try {
+            console.log('authservice logout');
             await AsyncStorage.removeItem('authToken');
             await AsyncStorage.removeItem('user');
         } catch (error) {

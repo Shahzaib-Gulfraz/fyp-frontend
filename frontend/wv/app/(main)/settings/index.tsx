@@ -48,6 +48,7 @@ import {
   AlertCircle,
 } from "lucide-react-native";
 import { useTheme } from "../../../src/context/ThemeContext";
+import { useUser } from "../../../src/context/UserContext";
 
 const SETTINGS_OPTIONS = [
   {
@@ -84,7 +85,7 @@ const SETTINGS_OPTIONS = [
         description: "Permanently delete your account",
         icon: <Trash2 size={20} />,
         type: "navigation",
-         route: "/profile/delete-account",
+        route: "/profile/delete-account",
       },
     ],
   },
@@ -353,6 +354,9 @@ export default function SettingsScreen() {
     }
   };
 
+  // Get logout function from UserContext
+  const { logout } = useUser();
+
   const handleLogout = () => {
     Alert.alert(
       "Logout",
@@ -362,9 +366,19 @@ export default function SettingsScreen() {
         {
           text: "Logout",
           style: "destructive",
-          onPress: () => {
-            console.log("Logged out");
-            router.replace("/login");
+          onPress: async () => {
+            try {
+              console.log("Logging out...");
+              await logout();
+
+              // Add a small delay to ensure state updates propagate
+              setTimeout(() => {
+                router.replace("/(auth)/login");
+              }, 100);
+            } catch (error) {
+              console.error("Logout failed:", error);
+              Alert.alert("Error", "Failed to logout. Please try again.");
+            }
           },
         },
       ]
