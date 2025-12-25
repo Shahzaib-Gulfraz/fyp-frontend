@@ -54,32 +54,91 @@ const restrictTo = (...roles) => {
 };
 
 /**
- * Check if user owns the shop
+ * Protect Shop routes - Verify JWT token and find Shop
  */
-const isShopOwner = async (req, res, next) => {
-    try {
-        const Shop = require('../models/Shop');
-        const shopId = req.params.shopId || req.body.shopId;
+const shopProtect = async (req, res, next) => {
+    let token;
 
-        if (!shopId) {
-            return res.status(400).json({ message: 'Shop ID is required' });
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+        try {
+            const Shop = require('../models/Shop');
+            token = req.headers.authorization.split(' ')[1];
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+            req.shop = await Shop.findById(decoded.id).select('-password');
+
+            if (!req.shop) {
+                return res.status(401).json({ message: 'Shop not found' });
+            }
+
+            if (!req.shop.isActive) {
+                return res.status(401).json({ message: 'Shop is deactivated' });
+            }
+
+            next();
+        } catch (error) {
+            console.error('Shop Auth middleware error:', error);
+            return res.status(401).json({ message: 'Not authorized, token failed' });
         }
+    }
 
-        const shop = await Shop.findById(shopId);
-
-        if (!shop) {
-            return res.status(404).json({ message: 'Shop not found' });
-        }
-
-        if (shop.ownerId.toString() !== req.user._id.toString()) {
-            return res.status(403).json({ message: 'Not authorized to access this shop' });
-        }
-
-        req.shop = shop;
-        next();
-    } catch (error) {
-        res.status(500).json({ message: 'Server error', error: error.message });
+    if (!token) {
+        return res.status(401).json({ message: 'Not authorized, no token' });
     }
 };
 
-module.exports = { protect, restrictTo, isShopOwner };
+/**
+ * Check if the authenticated shop is the one being accessed
+ */
+const isSelfShop = async (req, res, next) => {
+    const shopId = req.params.id || req.params.shopId || req.body.shopId;
+
+    if (!shopId) {
+        return res.status(400).json({ message: 'Shop ID is required' });
+    }
+
+    if (req.shop._id.toString() !== shopId) {
+        return res.status(403).json({ message: 'Not authorized to access this shop' });
+    }
+
+    next();
+};
+
+/**
+ * Allow either User or Shop authentication
+ */
+const multiProtect = async (req, res, next) => {
+    let token;
+
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+        try {
+            token = req.headers.authorization.split(' ')[1];
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+            // Try User first
+            const user = await User.findById(decoded.id).select('-password');
+            if (user && user.isActive) {
+                req.user = user;
+                return next();
+            }
+
+            // Try Shop if User not found
+            const Shop = require('../models/Shop');
+            const shop = await Shop.findById(decoded.id).select('-password');
+            if (shop && shop.isActive) {
+                req.shop = shop;
+                return next();
+            }
+
+            return res.status(401).json({ message: 'Not authorized, entity not found' });
+        } catch (error) {
+            return res.status(401).json({ message: 'Not authorized, token failed' });
+        }
+    }
+
+    if (!token) {
+        return res.status(401).json({ message: 'Not authorized, no token' });
+    }
+};
+
+module.exports = { protect, restrictTo, shopProtect, isSelfShop, multiProtect };

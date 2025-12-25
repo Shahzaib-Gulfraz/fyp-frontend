@@ -92,7 +92,7 @@ const getProduct = async (req, res) => {
 const createProduct = async (req, res) => {
     try {
         const productData = req.body;
-        productData.shopId = req.user.shopId;
+        productData.shopId = req.shop._id;
 
         // Handle image uploads
         if (req.files) {
@@ -118,7 +118,7 @@ const createProduct = async (req, res) => {
 
         // Update shop product count
         const Shop = require('../models/Shop');
-        await Shop.findByIdAndUpdate(req.user.shopId, {
+        await Shop.findByIdAndUpdate(req.shop._id, {
             $inc: { 'stats.totalProducts': 1 }
         });
 
@@ -145,7 +145,7 @@ const updateProduct = async (req, res) => {
         }
 
         // Check ownership
-        if (product.shopId.toString() !== req.user.shopId.toString()) {
+        if (product.shopId.toString() !== req.shop._id.toString()) {
             return res.status(403).json({ message: 'Not authorized' });
         }
 
@@ -176,7 +176,7 @@ const deleteProduct = async (req, res) => {
         }
 
         // Check ownership
-        if (product.shopId.toString() !== req.user.shopId.toString()) {
+        if (product.shopId.toString() !== req.shop._id.toString()) {
             return res.status(403).json({ message: 'Not authorized' });
         }
 

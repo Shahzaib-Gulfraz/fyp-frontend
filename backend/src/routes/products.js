@@ -7,24 +7,23 @@ const {
     updateProduct,
     deleteProduct
 } = require('../controllers/productController');
-const { protect, restrictTo } = require('../middleware/auth');
+const { shopProtect } = require('../middleware/auth');
 const { uploadProductImages, handleMulterError } = require('../middleware/upload');
 
 // Public routes
 router.get('/', getProducts);
 router.get('/:id', getProduct);
 
-// Protected routes (Shop Owner only)
+// Protected routes (Shop only)
 router.post(
     '/',
-    protect,
-    restrictTo('shop_owner'),
+    shopProtect,
     uploadProductImages,
     handleMulterError,
     createProduct
 );
 
-router.put('/:id', protect, restrictTo('shop_owner'), updateProduct);
-router.delete('/:id', protect, restrictTo('shop_owner'), deleteProduct);
+router.put('/:id', shopProtect, updateProduct);
+router.delete('/:id', shopProtect, deleteProduct);
 
 module.exports = router;

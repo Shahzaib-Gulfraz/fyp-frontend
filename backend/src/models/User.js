@@ -75,11 +75,6 @@ const userSchema = new mongoose.Schema({
     },
     lastLoginAt: {
         type: Date
-    },
-    // For shop owners
-    shopId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Shop'
     }
 }, {
     timestamps: true // Adds createdAt and updatedAt
@@ -89,15 +84,14 @@ const userSchema = new mongoose.Schema({
 userSchema.index({ role: 1 });
 
 // Hash password before saving
-userSchema.pre('save', async function (next) {
-    if (!this.isModified('password')) return next();
+userSchema.pre('save', async function () {
+    if (!this.isModified('password')) return;
 
     try {
-        const salt = await bcrypt.genSalt(10);
+        const salt = await bcrypt.getSalt(10);
         this.password = await bcrypt.hash(this.password, salt);
-        next();
     } catch (error) {
-        next(error);
+        throw error;
     }
 });
 
@@ -117,7 +111,6 @@ userSchema.methods.toPublicJSON = function () {
         profileImage: this.profileImage?.url,
         role: this.role,
         isVerified: this.isVerified,
-        shopId: this.shopId,
         bio: this.bio,
         location: this.location,
         createdAt: this.createdAt

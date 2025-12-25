@@ -16,6 +16,7 @@ const authService = {
             if (response.data.token) {
                 await AsyncStorage.setItem('authToken', response.data.token);
                 await AsyncStorage.setItem('user', JSON.stringify(response.data.user));
+                await AsyncStorage.setItem('userType', 'user');
             }
 
             return response.data;
@@ -35,6 +36,7 @@ const authService = {
             if (response.data.token) {
                 await AsyncStorage.setItem('authToken', response.data.token);
                 await AsyncStorage.setItem('user', JSON.stringify(response.data.user));
+                await AsyncStorage.setItem('userType', 'user');
             }
 
             return response.data;
@@ -51,6 +53,8 @@ const authService = {
             console.log('authservice logout');
             await AsyncStorage.removeItem('authToken');
             await AsyncStorage.removeItem('user');
+            await AsyncStorage.removeItem('userType');
+            await AsyncStorage.removeItem('shop');
         } catch (error) {
             console.error('Logout error:', error);
         }

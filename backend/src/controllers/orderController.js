@@ -94,12 +94,12 @@ const getUserOrders = async (req, res) => {
 
 /**
  * @desc    Get shop's orders
- * @route   GET /api/orders/shop/:shopId
- * @access  Private (Shop Owner)
+ * @route   GET /api/orders/shop
+ * @access  Private (Shop)
  */
 const getShopOrders = async (req, res) => {
     try {
-        const orders = await Order.find({ shopId: req.params.shopId })
+        const orders = await Order.find({ shopId: req.shop._id })
             .populate('userId', 'fullName email phone')
             .sort('-createdAt');
 
@@ -125,10 +125,10 @@ const getOrder = async (req, res) => {
         }
 
         // Check authorization
-        if (
-            order.userId._id.toString() !== req.user._id.toString() &&
-            order.shopId.ownerId?.toString() !== req.user._id.toString()
-        ) {
+        const isCustomer = req.user && order.userId._id.toString() === req.user._id.toString();
+        const isShop = req.shop && order.shopId._id.toString() === req.shop._id.toString();
+
+        if (!isCustomer && !isShop) {
             return res.status(403).json({ message: 'Not authorized' });
         }
 

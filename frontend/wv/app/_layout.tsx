@@ -10,7 +10,7 @@ function RootLayoutNav() {
   const { isDark } = useTheme();
   const router = useRouter();
   const segments = useSegments();
-  const { isAuthenticated, isLoading, checkAuth } = useAuth();
+  const { isAuthenticated, userType, isLoading, checkAuth } = useAuth();
 
   // Re-check auth when navigating to main group
   React.useEffect(() => {
@@ -27,18 +27,22 @@ function RootLayoutNav() {
 
     const inAuthGroup = segments[0] === "(auth)";
 
-    console.log('🔍 Auth check - isAuthenticated:', isAuthenticated, 'inAuthGroup:', inAuthGroup, 'segments:', segments);
+    console.log('🔍 Auth check - isAuthenticated:', isAuthenticated, 'userType:', userType, 'inAuthGroup:', inAuthGroup, 'segments:', segments);
 
     if (!isAuthenticated && !inAuthGroup) {
       // Redirect to login if not authenticated
       console.log('🔄 Redirecting to login (not authenticated)');
       router.replace("/(auth)/login");
     } else if (isAuthenticated && inAuthGroup) {
-      // Redirect to home if authenticated and in auth screens
-      console.log('🔄 Redirecting to home (authenticated in auth group)');
-      router.replace("/(main)/home");
+      // Redirect based on user type if authenticated and in auth screens
+      console.log('🔄 Redirecting authenticated user in auth group to correct home...');
+      if (userType === 'shop') {
+        router.replace("/(main)/shop/dashboard");
+      } else {
+        router.replace("/(main)/home");
+      }
     }
-  }, [isAuthenticated, segments, isLoading]);
+  }, [isAuthenticated, segments, isLoading, userType]);
 
 
 

@@ -306,50 +306,74 @@ export default function SettingsScreen() {
   };
 
   const handleAction = (item: any) => {
+    const showWebAlert = (title: string, message: string) => {
+      if (Platform.OS === "web") {
+        window.alert(`${title}: ${message}`);
+        return true;
+      }
+      return false;
+    };
+
     switch (item.id) {
       case "invite_friends":
+        if (showWebAlert("Invite Friends", "Share your invite link with friends!")) break;
         Alert.alert("Invite Friends", "Share your invite link with friends!");
         break;
       case "link_sharing":
+        if (showWebAlert("Link Sharing", "Your profile link has been copied to clipboard!")) break;
         Alert.alert("Link Sharing", "Your profile link has been copied to clipboard!");
         break;
       case "rate_app":
+        if (showWebAlert("Rate App", "Redirecting to App Store...")) break;
         Alert.alert("Rate App", "Redirecting to App Store...");
         break;
       case "share_app":
+        if (showWebAlert("Share App", "Sharing Wear Virtually with friends!")) break;
         Alert.alert("Share App", "Sharing Wear Virtually with friends!");
         break;
       case "clear_cache":
-        Alert.alert(
-          "Clear Cache",
-          "Are you sure you want to clear cache?",
-          [
-            { text: "Cancel", style: "cancel" },
-            {
-              text: "Clear",
-              style: "destructive",
-              onPress: () => {
-                Alert.alert("Success", "Cache cleared successfully!");
-              }
-            },
-          ]
-        );
+        if (Platform.OS === "web") {
+          if (window.confirm("Are you sure you want to clear cache?")) {
+            window.alert("Cache cleared successfully!");
+          }
+        } else {
+          Alert.alert(
+            "Clear Cache",
+            "Are you sure you want to clear cache?",
+            [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Clear",
+                style: "destructive",
+                onPress: () => {
+                  Alert.alert("Success", "Cache cleared successfully!");
+                }
+              },
+            ]
+          );
+        }
         break;
       case "delete_account":
-        Alert.alert(
-          "Delete Account",
-          "This action cannot be undone. All your data will be permanently deleted.",
-          [
-            { text: "Cancel", style: "cancel" },
-            {
-              text: "Delete Account",
-              style: "destructive",
-              onPress: () => {
-                Alert.alert("Account Deleted", "Your account has been scheduled for deletion.");
-              }
-            },
-          ]
-        );
+        if (Platform.OS === "web") {
+          if (window.confirm("This action cannot be undone. All your data will be permanently deleted. Are you sure you want to delete your account?")) {
+            window.alert("Your account has been scheduled for deletion.");
+          }
+        } else {
+          Alert.alert(
+            "Delete Account",
+            "This action cannot be undone. All your data will be permanently deleted.",
+            [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Delete Account",
+                style: "destructive",
+                onPress: () => {
+                  Alert.alert("Account Deleted", "Your account has been scheduled for deletion.");
+                }
+              },
+            ]
+          );
+        }
         break;
     }
   };
@@ -358,31 +382,40 @@ export default function SettingsScreen() {
   const { logout } = useUser();
 
   const handleLogout = () => {
-    Alert.alert(
-      "Logout",
-      "Are you sure you want to logout?",
-      [
+    const performLogout = async () => {
+      try {
+        console.log("Logging out...");
+        await logout();
+
+        // Add a small delay to ensure state updates propagate
+        setTimeout(() => {
+          router.replace("/(auth)/login");
+        }, 100);
+      } catch (error) {
+        console.error("Logout failed:", error);
+        if (Platform.OS === "web") {
+          window.alert("Failed to logout. Please try again.");
+        } else {
+          Alert.alert("Error", "Failed to logout. Please try again.");
+        }
+      }
+    };
+
+    if (Platform.OS === "web") {
+      const confirmed = window.confirm("Are you sure you want to logout?");
+      if (confirmed) {
+        performLogout();
+      }
+    } else {
+      Alert.alert("Logout", "Are you sure you want to logout?", [
         { text: "Cancel", style: "cancel" },
         {
           text: "Logout",
           style: "destructive",
-          onPress: async () => {
-            try {
-              console.log("Logging out...");
-              await logout();
-
-              // Add a small delay to ensure state updates propagate
-              setTimeout(() => {
-                router.replace("/(auth)/login");
-              }, 100);
-            } catch (error) {
-              console.error("Logout failed:", error);
-              Alert.alert("Error", "Failed to logout. Please try again.");
-            }
-          },
+          onPress: performLogout,
         },
-      ]
-    );
+      ]);
+    }
   };
 
   const renderSettingItem = (item: any) => {

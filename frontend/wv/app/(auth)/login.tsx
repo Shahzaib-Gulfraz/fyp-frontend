@@ -15,6 +15,7 @@ import {
   Animated,
   Easing,
 } from "react-native";
+import { useAuth } from "../../src/context/AuthContext";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -32,7 +33,9 @@ const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { setAuthenticated } = useAuth();
 
+  const [loginType, setLoginType] = useState<"user" | "shop">("user");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -115,37 +118,43 @@ export default function LoginScreen() {
     console.log('🔵 Login started with email:', email);
 
     try {
-      // Import authService dynamically to avoid circular dependencies
-      console.log('🔵 Importing authService...');
-      const { authService } = await import('../../src/api');
-      console.log('✅ authService imported successfully');
+      // Import services dynamically to avoid circular dependencies
+      console.log('🔵 Importing services...');
+      const { authService, shopService } = await import('../../src/api');
+      console.log('✅ Services imported successfully');
 
-      // Call the real API
-      console.log('🔵 Calling login API...');
-      const response = await authService.login(email, password);
-      console.log('✅ Login API response:', JSON.stringify(response, null, 2));
+      // Call the appropriate API based on login type
+      console.log(`🔵 Calling ${loginType} login API...`);
+      let response;
+      if (loginType === 'user') {
+        response = await authService.login(email, password);
+      } else {
+        response = await shopService.loginShop(email, password);
+      }
+
+      console.log('✅ Login API response received');
 
       // Show success toast
       Toast.show({
         type: 'success',
         text1: 'Login Successful',
-        text2: `Welcome back, ${response.user?.name || 'User'}!`,
+        text2: `Welcome back, ${loginType === 'user' ? (response.user?.fullName || 'User') : (response.shop?.shopName || 'Shop Owner')}!`,
         position: 'top',
         visibilityTime: 3000,
       });
-      console.log('✅ Toast displayed');
 
-      // Wait a bit to ensure token is saved to AsyncStorage
-      console.log('🔵 Waiting for token to be saved...');
+      // Sync with global auth state
+      setAuthenticated(true, loginType === 'user' ? 'user' : 'shop');
+
+      // Wait a bit to ensure token is saved
       await new Promise(resolve => setTimeout(resolve, 300));
 
-      // Verify token was saved
-      const tokenSaved = await authService.isAuthenticated();
-      console.log('🔍 Token saved verification:', tokenSaved);
-
-      // Navigate to home screen
-      console.log('🔵 Attempting navigation to /(main)/home...');
-      router.replace("/(main)/home");
+      // Navigate based on type
+      if (loginType === 'user') {
+        router.replace("/(main)/home");
+      } else {
+        router.replace("/(main)/shop/dashboard");
+      }
       console.log('✅ Navigation called');
     } catch (error: any) {
       console.error('❌ Login error:', error);
@@ -217,6 +226,52 @@ export default function LoginScreen() {
             <Text style={styles.subtitle}>
               Your virtual fashion destination
             </Text>
+
+            {/* Role Selection */}
+            <View style={styles.roleContainer}>
+              <TouchableOpacity
+                onPress={() => setLoginType("user")}
+                style={[
+                  styles.roleButton,
+                  loginType === "user" && styles.roleButtonActive,
+                ]}
+              >
+                <Ionicons
+                  name="person-outline"
+                  size={18}
+                  color={loginType === "user" ? "#FFFFFF" : "#666666"}
+                />
+                <Text
+                  style={[
+                    styles.roleText,
+                    loginType === "user" && styles.roleTextActive,
+                  ]}
+                >
+                  Customer
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setLoginType("shop")}
+                style={[
+                  styles.roleButton,
+                  loginType === "shop" && styles.roleButtonActive,
+                ]}
+              >
+                <Ionicons
+                  name="storefront-outline"
+                  size={18}
+                  color={loginType === "shop" ? "#FFFFFF" : "#666666"}
+                />
+                <Text
+                  style={[
+                    styles.roleText,
+                    loginType === "shop" && styles.roleTextActive,
+                  ]}
+                >
+                  Shop Owner
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Form */}
@@ -343,9 +398,42 @@ const styles = StyleSheet.create({
 
   brandContainer: {
     alignItems: "center",
-    marginTop: 20, // Reduced from 40
-    marginBottom: 30, // Reduced from 48
+    marginTop: 20,
+    marginBottom: 24,
     paddingHorizontal: 20,
+  },
+
+  roleContainer: {
+    flexDirection: "row",
+    backgroundColor: "#F0F0F0",
+    borderRadius: 12,
+    padding: 4,
+    marginTop: 20,
+    width: "100%",
+  },
+
+  roleButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    borderRadius: 8,
+    gap: 8,
+  },
+
+  roleButtonActive: {
+    backgroundColor: "#000000",
+  },
+
+  roleText: {
+    fontSize: 14,
+    fontFamily: "Inter_500Medium",
+    color: "#666666",
+  },
+
+  roleTextActive: {
+    color: "#FFFFFF",
   },
 
   shineWrapper: {

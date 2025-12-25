@@ -1,4 +1,4 @@
-// app/(main)/shop/register.tsx
+// app/(auth)/shop-register.tsx
 import React, { useState } from "react";
 import {
   View,
@@ -25,6 +25,8 @@ import {
 } from "@expo-google-fonts/inter";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
+import Toast from "react-native-toast-message";
+import shopService from "../../src/api/shopService";
 
 const shopCategories = [
   { id: "clothes", label: "Clothes", icon: "shirt-outline" },
@@ -226,10 +228,11 @@ export default function RegisterShopScreen() {
       }
 
       if (!shopData.agreedToTerms) {
-        Alert.alert(
-          "Terms Required",
-          "You must agree to the Terms of Service and Privacy Policy."
-        );
+        Toast.show({
+          type: 'error',
+          text1: 'Terms Required',
+          text2: 'You must agree to the Terms of Service and Privacy Policy.',
+        });
         return false;
       }
     }
@@ -239,11 +242,22 @@ export default function RegisterShopScreen() {
   };
 
   const handleNextStep = () => {
+    console.log('Next step triggered for step:', step);
     if (validateStep(step)) {
       if (step < 3) {
         setStep(step + 1);
       } else {
+        console.log('Proceeding to handleSubmit');
         handleSubmit();
+      }
+    } else {
+      console.log('Validation failed for step:', step, errors);
+      if (step === 3) {
+        Toast.show({
+          type: 'error',
+          text1: 'Validation Error',
+          text2: 'Please correct the errors on the form before proceeding.',
+        });
       }
     }
   };
@@ -257,41 +271,27 @@ export default function RegisterShopScreen() {
   };
 
   const handleSubmit = async () => {
+    console.log('handleSubmit starting...');
     setIsLoading(true);
 
     try {
-      // Check if user is authenticated first
-      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
-      const token = await AsyncStorage.getItem('authToken');
-
-      console.log('Token exists:', !!token);
-
-      if (!token) {
-        Alert.alert(
-          'Authentication Required',
-          'Please login again to create your shop',
-          [
-            {
-              text: 'Go to Login',
-              onPress: () => router.replace('/(auth)/login')
-            }
-          ]
-        );
-        setIsLoading(false);
-        return;
-      }
-
-      // Import shopService dynamically
-      const { shopService } = await import('../../src/api');
+      console.log('Current shopData state:', {
+        email: shopData.email,
+        shopName: shopData.shopName,
+        hasLogo: !!shopData.logo,
+        hasBanner: !!shopData.banner
+      });
 
       // Prepare shop data
       const shopDataToSend = {
         shopName: shopData.shopName,
         shopUsername: shopData.shopUsername,
+        category: shopData.shopCategory, // Fixed field name to match backend
         businessType: shopData.businessType,
         description: shopData.description,
         email: shopData.email,
         phone: shopData.phone,
+        password: shopData.password,
         website: shopData.website || undefined,
         address: shopData.address,
         city: shopData.city,
@@ -305,39 +305,48 @@ export default function RegisterShopScreen() {
         banner: shopData.banner,
       };
 
-      console.log('Creating shop:', shopDataToSend);
+      console.log('Registering shop:', shopDataToSend.email);
 
-      // Call the real API
-      const response = await shopService.createShop(shopDataToSend, images);
+      // Call the new register API
+      const response = await shopService.registerShop(shopDataToSend, images);
 
-      console.log('Shop created successfully:', response.shop);
+      console.log('Shop registered successfully:', response);
 
-      Alert.alert(
-        "Shop Created!",
-        "Your shop has been created successfully!",
-        [
-          {
-            text: "OK",
-            onPress: () => router.replace("/(main)/shop/dashboard"),
-          },
-        ]
-      );
+      Toast.show({
+        type: 'success',
+        text1: response.message || 'Registration Successful!',
+        text2: 'Redirecting to your dashboard...',
+        visibilityTime: 2000,
+      });
+
+      // Redirect to dashboard after a short delay to let user see toast if needed, 
+      // or just redirect immediately as the user asked for both. 
+      // User said "after register successful usy /shop/dashboard pr route krva do"
+      setTimeout(() => {
+        router.replace("/(main)/shop/dashboard");
+      }, 1000);
     } catch (error: any) {
-      console.error('Shop creation error:', error);
+      console.error('Registration error:', error);
 
-      // Handle different error types
+      // Handle different error types with Toast
       if (error.status === 400) {
-        Alert.alert(
-          "Registration Failed",
-          error.message || "Shop username already exists or validation error"
-        );
+        Toast.show({
+          type: 'error',
+          text1: 'Registration Failed',
+          text2: error.message || 'Email/Username already exists or validation error',
+        });
       } else if (error.status === 0) {
-        Alert.alert("Network Error", "Please check your internet connection");
+        Toast.show({
+          type: 'error',
+          text1: 'Network Error',
+          text2: 'Please check your internet connection',
+        });
       } else {
-        Alert.alert(
-          "Registration Failed",
-          error.message || "An error occurred during registration. Please try again."
-        );
+        Toast.show({
+          type: 'error',
+          text1: 'Registration Failed',
+          text2: error.message || 'An error occurred during registration.',
+        });
       }
     } finally {
       setIsLoading(false);

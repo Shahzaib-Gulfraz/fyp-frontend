@@ -50,10 +50,10 @@ api.interceptors.response.use(
                 // You can navigate to login screen here if needed
             }
 
-            // Return error message from server
+            // Return error message and all data from server
             return Promise.reject({
+                ...data, // Include any extra fields like 'error' or 'details'
                 message: data.message || 'An error occurred',
-                errors: data.errors,
                 status,
             });
         } else if (error.request) {

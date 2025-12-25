@@ -1,4 +1,5 @@
 import api from './config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /**
  * Shop Service
@@ -49,10 +50,11 @@ const shopService = {
     },
 
     /**
-     * Create new shop
+     * Register new shop
      */
-    createShop: async (shopData, images) => {
+    registerShop: async (shopData, images) => {
         try {
+            console.log('shopService.registerShop starting...', { email: shopData.email });
             const formData = new FormData();
 
             // Add shop data
@@ -64,6 +66,9 @@ const shopService = {
 
             // Add logo
             if (images.logo) {
+                console.log('Adding logo to formData:', images.logo);
+                // For React Native, we use the {uri, name, type} object
+                // If this is Web, we'd need a different approach, but sticking to RN for now
                 formData.append('logo', {
                     uri: images.logo,
                     type: 'image/jpeg',
@@ -73,6 +78,7 @@ const shopService = {
 
             // Add banner
             if (images.banner) {
+                console.log('Adding banner to formData:', images.banner);
                 formData.append('banner', {
                     uri: images.banner,
                     type: 'image/jpeg',
@@ -80,11 +86,43 @@ const shopService = {
                 });
             }
 
-            const response = await api.post('/shops', formData, {
+            console.log('Sending register request to /shops/register...');
+            const response = await api.post('/shops/register', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                 },
             });
+
+            console.log('Register request successful:', !!response.data.token);
+
+            // Save token and shop data
+            if (response.data.token) {
+                await AsyncStorage.setItem('authToken', response.data.token);
+                await AsyncStorage.setItem('shop', JSON.stringify(response.data.shop));
+                await AsyncStorage.setItem('userType', 'shop');
+                console.log('Shop auth data saved to AsyncStorage');
+            }
+
+            return response.data;
+        } catch (error) {
+            console.error('shopService.registerShop error:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Login shop
+     */
+    loginShop: async (email, password) => {
+        try {
+            const response = await api.post('/shops/login', { email, password });
+
+            // Save token and shop data
+            if (response.data.token) {
+                await AsyncStorage.setItem('authToken', response.data.token);
+                await AsyncStorage.setItem('shop', JSON.stringify(response.data.shop));
+                await AsyncStorage.setItem('userType', 'shop');
+            }
 
             return response.data;
         } catch (error) {
@@ -93,11 +131,11 @@ const shopService = {
     },
 
     /**
-     * Get my shop (for shop owners)
+     * Get my shop profile (for logged in shops)
      */
     getMyShop: async () => {
         try {
-            const response = await api.get('/shops/my/shop');
+            const response = await api.get('/shops/my/profile');
             return response.data;
         } catch (error) {
             throw error;

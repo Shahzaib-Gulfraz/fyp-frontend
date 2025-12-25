@@ -1,20 +1,16 @@
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 
 const shopSchema = new mongoose.Schema({
-    ownerId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
-    },
     shopName: {
         type: String,
         required: [true, 'Shop name is required'],
+        unique: true,
         trim: true
     },
     shopUsername: {
         type: String,
         required: [true, 'Shop username is required'],
-        unique: true,
         trim: true,
         minlength: [3, 'Shop username must be at least 3 characters'],
         maxlength: [20, 'Shop username cannot exceed 20 characters'],
@@ -35,13 +31,30 @@ const shopSchema = new mongoose.Schema({
         enum: ['individual', 'small_business', 'brand', 'reseller']
     },
 
-    // Contact Information
+    // Authentication & Contact Information
     email: {
         type: String,
-        required: [true, 'Contact email is required'],
+        required: [true, 'Shop email is required'],
+        unique: true,
         lowercase: true,
         trim: true,
         match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email']
+    },
+    password: {
+        type: String,
+        required: [true, 'Password is required'],
+        minlength: [8, 'Password must be at least 8 characters'],
+        select: false
+    },
+    // SEO and Slugs
+    seo: {
+        slug: {
+            type: String,
+            lowercase: true,
+            trim: true
+        },
+        metaTitle: String,
+        metaDescription: String
     },
     phone: {
         type: String,
@@ -119,8 +132,38 @@ const shopSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// Indexes (only non-unique fields)
-shopSchema.index({ ownerId: 1 });
+// Hash password and generate slug before saving
+shopSchema.pre('save', async function () {
+    // Generate slug from username if not present
+    if (!this.seo || !this.seo.slug) {
+        if (!this.seo) this.seo = {};
+        this.seo.slug = this.shopUsername ? this.shopUsername.toLowerCase().replace(/[^a-z0-9]/g, '-') : undefined;
+    }
+
+    if (!this.isModified('password')) return;
+
+    try {
+        const salt = await bcrypt.genSalt(10);
+        this.password = await bcrypt.hash(this.password, salt);
+    } catch (error) {
+        throw error;
+    }
+});
+
+// Method to compare passwords
+shopSchema.methods.comparePassword = async function (candidatePassword) {
+    return await bcrypt.compare(candidatePassword, this.password);
+};
+
+// Method to get public shop data
+shopSchema.methods.toPublicJSON = function () {
+    const shop = this.toObject();
+    delete shop.password;
+    return shop;
+};
+
+// Indexes
+// Indexes (Email and seo.slug already have unique indexes from schema)
 shopSchema.index({ city: 1 });
 shopSchema.index({ isActive: 1 });
 shopSchema.index({ 'stats.rating': -1 });

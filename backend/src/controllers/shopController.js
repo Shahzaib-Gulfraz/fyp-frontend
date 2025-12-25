@@ -1,94 +1,110 @@
 const Shop = require('../models/Shop');
-const User = require('../models/User');
+const jwt = require('jsonwebtoken');
 const { uploadImage, deleteImage } = require('../config/cloudinary');
 
 /**
- * @desc    Create shop
- * @route   POST /api/shops
- * @access  Private (Shop Owner)
+ * Generate JWT token for Shop
  */
-const createShop = async (req, res) => {
+const generateToken = (id) => {
+    return jwt.sign({ id }, process.env.JWT_SECRET, {
+        expiresIn: process.env.JWT_EXPIRE || '7d'
+    });
+};
+
+/**
+ * @desc    Register new shop
+ * @route   POST /api/shops/register
+ * @access  Public
+ */
+const registerShop = async (req, res) => {
     try {
-        console.log('Creating shop for user:', req.user._id);
-        console.log('Shop data received:', req.body);
-        console.log('Files received:', req.files ? Object.keys(req.files) : 'No files');
+        console.log('Registering independent shop:', req.body.email);
 
-        // Check if user already has a shop
-        const existingShop = await Shop.findOne({ ownerId: req.user._id });
-        if (existingShop) {
-            return res.status(400).json({ message: 'You already have a shop' });
+        const { email, password, shopName } = req.body;
+
+        // Check if shop exists
+        const shopExists = await Shop.findOne({
+            $or: [
+                { email },
+                { shopName }
+            ]
+        });
+
+        if (shopExists) {
+            let message = 'Registration failed';
+            if (shopExists.email === email) message = 'Email already registered';
+            else if (shopExists.shopName === shopName) message = 'Shop name already taken';
+
+            return res.status(400).json({ message });
         }
 
-        // Check for duplicate shopUsername
-        const duplicateUsername = await Shop.findOne({ shopUsername: req.body.shopUsername });
-        if (duplicateUsername) {
-            return res.status(400).json({ message: 'Shop username already taken' });
-        }
-
-        const shopData = req.body;
-        shopData.ownerId = req.user._id;
+        const shopData = { ...req.body };
 
         // Handle image uploads
         if (req.files) {
             if (req.files.logo && req.files.logo[0]) {
-                console.log('Uploading logo...');
                 const b64 = Buffer.from(req.files.logo[0].buffer).toString('base64');
                 const dataURI = `data:${req.files.logo[0].mimetype};base64,${b64}`;
                 shopData.logo = await uploadImage(dataURI, 'shops/logos');
-                console.log('Logo uploaded:', shopData.logo);
             }
 
             if (req.files.banner && req.files.banner[0]) {
-                console.log('Uploading banner...');
                 const b64 = Buffer.from(req.files.banner[0].buffer).toString('base64');
                 const dataURI = `data:${req.files.banner[0].mimetype};base64,${b64}`;
                 shopData.banner = await uploadImage(dataURI, 'shops/banners');
-                console.log('Banner uploaded:', shopData.banner);
             }
         }
 
-        console.log('Creating shop in database...');
         const shop = await Shop.create(shopData);
-        console.log('Shop created:', shop._id);
 
-        // Update user's shopId and role
-        console.log('Updating user role...');
-        await User.findByIdAndUpdate(req.user._id, {
-            shopId: shop._id,
-            role: 'shop_owner'
-        });
+        // Generate token
+        const token = generateToken(shop._id);
 
-        console.log('Shop creation successful!');
         res.status(201).json({
-            message: 'Shop created successfully',
-            shop
+            message: 'Shop registered successfully',
+            token,
+            shop: shop.toPublicJSON()
         });
     } catch (error) {
-        console.error('Shop creation error:', error);
-        console.error('Error stack:', error.stack);
+        console.error('Shop registration error:', error);
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
 
-        // Handle specific errors
-        if (error.code === 11000) {
-            const field = Object.keys(error.keyPattern)[0];
-            return res.status(400).json({
-                message: `${field} already exists`,
-                error: error.message
-            });
+/**
+ * @desc    Login shop
+ * @route   POST /api/shops/login
+ * @access  Public
+ */
+const loginShop = async (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        if (!email || !password) {
+            return res.status(400).json({ message: 'Please provide email and password' });
         }
 
-        if (error.name === 'ValidationError') {
-            const errors = Object.values(error.errors).map(err => err.message);
-            return res.status(400).json({
-                message: 'Validation error',
-                errors
-            });
+        // Find shop and include password
+        const shop = await Shop.findOne({ email }).select('+password');
+
+        if (!shop || !(await shop.comparePassword(password))) {
+            return res.status(401).json({ message: 'Invalid credentials' });
         }
 
-        res.status(500).json({
-            message: 'Server error',
-            error: error.message,
-            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        if (!shop.isActive) {
+            return res.status(401).json({ message: 'Shop is deactivated' });
+        }
+
+        // Generate token
+        const token = generateToken(shop._id);
+
+        res.json({
+            message: 'Shop login successful',
+            token,
+            shop: shop.toPublicJSON()
         });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error: error.message });
     }
 };
 
@@ -136,7 +152,7 @@ const getShops = async (req, res) => {
  */
 const getShop = async (req, res) => {
     try {
-        const shop = await Shop.findById(req.params.id).populate('ownerId', 'username fullName');
+        const shop = await Shop.findById(req.params.id);
 
         if (!shop) {
             return res.status(404).json({ message: 'Shop not found' });
@@ -161,8 +177,8 @@ const updateShop = async (req, res) => {
             return res.status(404).json({ message: 'Shop not found' });
         }
 
-        // Check ownership
-        if (shop.ownerId.toString() !== req.user._id.toString()) {
+        // Check auth (assuming shop is authenticated)
+        if (shop._id.toString() !== req.shop._id.toString()) {
             return res.status(403).json({ message: 'Not authorized' });
         }
 
@@ -186,13 +202,13 @@ const updateShop = async (req, res) => {
  */
 const getMyShop = async (req, res) => {
     try {
-        const shop = await Shop.findOne({ ownerId: req.user._id });
+        const shop = await Shop.findById(req.shop._id);
 
         if (!shop) {
-            return res.status(404).json({ message: 'You do not have a shop yet' });
+            return res.status(404).json({ message: 'Shop not found' });
         }
 
-        res.json({ shop });
+        res.json({ shop: shop.toPublicJSON() });
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
     }
@@ -219,7 +235,8 @@ const getShopProducts = async (req, res) => {
 };
 
 module.exports = {
-    createShop,
+    registerShop,
+    loginShop,
     getShops,
     getShop,
     updateShop,

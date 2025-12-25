@@ -58,47 +58,65 @@ const register = async (req, res) => {
  */
 const login = async (req, res) => {
     try {
-        console.log("/login")
+        console.log("🔵 Login attempt for email:", req.body.email);
         const { email, password } = req.body;
 
         // Validate input
         if (!email || !password) {
+            console.log("❌ Missing email or password");
             return res.status(400).json({ message: 'Please provide email and password' });
         }
 
         // Find user and include password
+        console.log("🔵 Finding user in DB...");
         const user = await User.findOne({ email }).select('+password');
 
         if (!user) {
+            console.log("❌ User not found:", email);
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
         // Check if account is active
         if (!user.isActive) {
+            console.log("❌ Account inactive for:", email);
             return res.status(401).json({ message: 'Account is deactivated' });
         }
 
         // Check password
+        console.log("🔵 Comparing passwords...");
         const isMatch = await user.comparePassword(password);
 
         if (!isMatch) {
+            console.log("❌ Password mismatch for:", email);
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
         // Update last login
+        console.log("🔵 Updating last login...");
         user.lastLoginAt = new Date();
         await user.save();
 
         // Generate token
+        console.log("🔵 Generating token...");
+        if (!process.env.JWT_SECRET) {
+            console.error("⚠️ JWT_SECRET is not defined in environment variables!");
+            throw new Error("JWT_SECRET is missing from server configuration");
+        }
         const token = generateToken(user._id);
 
+        console.log("✅ Login successful for:", email);
         res.json({
             message: 'Login successful',
             token,
             user: user.toPublicJSON()
         });
     } catch (error) {
-        res.status(500).json({ message: 'Server error', error: error.message });
+        console.error("🔥 Login Error:", error);
+        res.status(500).json({
+            message: 'Server error',
+            error: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
     }
 };
 

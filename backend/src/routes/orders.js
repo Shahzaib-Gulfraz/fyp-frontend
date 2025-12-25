@@ -7,15 +7,17 @@ const {
     getOrder,
     updateOrderStatus
 } = require('../controllers/orderController');
-const { protect, restrictTo, isShopOwner } = require('../middleware/auth');
+const { protect, shopProtect, multiProtect } = require('../middleware/auth');
 
-// All routes require authentication
-router.use(protect);
+// Customer routes
+router.post('/', protect, createOrder);
+router.get('/', protect, getUserOrders);
 
-router.post('/', createOrder);
-router.get('/', getUserOrders);
-router.get('/shop/:shopId', restrictTo('shop_owner'), getShopOrders);
-router.get('/:id', getOrder);
-router.put('/:id/status', restrictTo('shop_owner'), updateOrderStatus);
+// Shop routes
+router.get('/shop', shopProtect, getShopOrders);
+router.put('/:id/status', shopProtect, updateOrderStatus);
+
+// Shared routes
+router.get('/:id', multiProtect, getOrder);
 
 module.exports = router;
