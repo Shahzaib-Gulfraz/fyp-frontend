@@ -1,6 +1,6 @@
 // src/context/UserContext.tsx
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { useAuth } from './AuthContext';
+import { useAuth } from "@/src/context/AuthContext";
 
 type UserRole = 'user' | 'shop_owner';
 
@@ -66,7 +66,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     try {
       console.log('logout from context');
-      const { authService } = await import('../api');
+      const { authService } = await import('@/src/api');
       await authService.logout();
       setAuthenticated(false);
     } catch (error) {
@@ -84,7 +84,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     try {
       // In a real implementation, this would call api.get('/auth/me')
       // For now, we'll try to use the authService if available
-      const { authService } = await import('../api');
+      const { authService } = await import('@/src/api');
       try {
         const userData = await authService.getProfile();
         // Check if userData is nested under 'user' key or is the user object directly

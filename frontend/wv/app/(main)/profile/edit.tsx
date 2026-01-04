@@ -66,7 +66,7 @@ export default function EditProfileScreen() {
       }
     };
     loadData();
-  }, []);
+  }, [refreshProfile]);
 
   // Update form when user data changes
   useEffect(() => {

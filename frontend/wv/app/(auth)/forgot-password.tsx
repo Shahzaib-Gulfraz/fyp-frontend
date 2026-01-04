@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -8,8 +8,10 @@ import {
   SafeAreaView,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   ActivityIndicator,
+  Dimensions,
+  Animated,
+  Easing,
 } from "react-native";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
@@ -18,10 +20,13 @@ import { Ionicons } from "@expo/vector-icons";
 import {
   useFonts,
   Inter_400Regular,
-  Inter_500Medium,
   Inter_600SemiBold,
   Inter_700Bold,
 } from "@expo-google-fonts/inter";
+import Toast from "react-native-toast-message";
+import { authTheme } from "@/src/theme/authTheme";
+
+const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
@@ -30,12 +35,34 @@ export default function ForgotPasswordScreen() {
   const [emailError, setEmailError] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
 
+  const shineAnim = useRef(new Animated.Value(-120)).current;
+
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
-    Inter_500Medium,
     Inter_600SemiBold,
     Inter_700Bold,
   });
+
+  useEffect(() => {
+    const loop = () => {
+      shineAnim.setValue(-120);
+      Animated.timing(shineAnim, {
+        toValue: 320,
+        duration: 1500,
+        easing: Easing.inOut(Easing.ease),
+        useNativeDriver: true,
+      }).start(() => setTimeout(loop, 2200));
+    };
+    loop();
+  }, [shineAnim]);
+
+  if (!fontsLoaded) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator size="large" color={authTheme.colors.textPrimary} />
+      </View>
+    );
+  }
 
   const validateEmail = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -57,76 +84,104 @@ export default function ForgotPasswordScreen() {
     try {
       // Simulate API call
       console.log("Password reset requested for:", email);
-      
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
+
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
+      Toast.show({
+        type: "success",
+        text1: "Email Sent",
+        text2: "Password reset instructions have been sent to your email.",
+      });
+
       setIsSubmitted(true);
-    } catch (error) {
-      Alert.alert(
-        "Error",
-        "Failed to send reset email. Please try again."
-      );
+    } catch {
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Failed to send reset email. Please try again.",
+      });
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handlePreviousStep = () => {
+    router.push("/login");
   };
 
   const handleResendEmail = () => {
     handleResetPassword();
   };
 
-  if (!fontsLoaded) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#000000" />
-      </View>
-    );
-  }
-
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.keyboardView}
+        style={{ flex: 1 }}
       >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+          <TouchableOpacity onPress={handlePreviousStep}>
+            <Ionicons
+              name="arrow-back"
+              size={24}
+              color={authTheme.colors.textPrimary}
+            />
           </TouchableOpacity>
+
+          <View style={{ flex: 1 }} />
+
           <Image
-            source={{
-              uri: "https://raw.githubusercontent.com/example/wear-virtually/main/assets/logo-black.png",
-            }}
-            style={styles.logo}
+            source={require("../../assets/images/logo-light.png")}
+            style={styles.logoRight}
             contentFit="contain"
           />
         </View>
+
 
         <View style={styles.content}>
           {!isSubmitted ? (
             <>
               {/* Title Section */}
-              <View style={styles.titleSection}>
-                <Text style={styles.title}>Reset Password</Text>
+              <View style={styles.brandContainer}>
+                <View style={styles.shineWrapper}>
+                  <Text style={styles.appName}>Reset Password</Text>
+                  <Animated.View
+                    pointerEvents="none"
+                    style={[
+                      styles.shineOverlay,
+                      { transform: [{ translateX: shineAnim }] },
+                    ]}
+                  >
+                    <LinearGradient
+                      colors={[
+                        "transparent",
+                        "rgba(255,255,255,0.85)",
+                        "transparent",
+                      ]}
+                      style={styles.shineGradient}
+                    />
+                  </Animated.View>
+                </View>
+
                 <Text style={styles.subtitle}>
-                  Enter your email address and we will send you instructions to reset your password.
+                  Enter your email address and we will send you instructions to
+                  reset your password.
                 </Text>
               </View>
 
               {/* Form Section */}
-              <View style={styles.formSection}>
-                <View style={styles.inputContainer}>
-                  <Text style={styles.inputLabel}>Email Address</Text>
-                  <View style={[styles.inputWrapper, emailError ? styles.inputError : null]}>
-                    <Ionicons name="mail-outline" size={20} color="#666666" style={styles.inputIcon} />
+              <View style={styles.formContainer}>
+                <View style={styles.field}>
+                  <Text style={styles.label}>Email Address</Text>
+                  <View
+                    style={[styles.inputBox, emailError && styles.errorBorder]}
+                  >
+                    <Ionicons name="mail-outline" size={20} color="#777" />
                     <TextInput
                       style={styles.input}
                       placeholder="Enter your email"
-                      placeholderTextColor="#999999"
+                      placeholderTextColor={authTheme.colors.textSecondary}
                       value={email}
                       onChangeText={(text) => {
                         setEmail(text);
@@ -138,27 +193,34 @@ export default function ForgotPasswordScreen() {
                       editable={!isLoading}
                     />
                   </View>
-                  {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
+                  {emailError ? (
+                    <Text style={styles.error}>{emailError}</Text>
+                  ) : null}
                 </View>
 
                 {/* Reset Button */}
                 <TouchableOpacity
-                  style={[styles.resetButton, isLoading ? styles.resetButtonDisabled : null]}
+                  style={[styles.button, isLoading && styles.buttonDisabled]}
                   onPress={handleResetPassword}
                   disabled={isLoading}
                 >
                   <LinearGradient
-                    colors={["#000000", "#333333"]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.gradientButton}
+                    colors={["#000", "#333"]}
+                    style={styles.buttonInner}
                   >
                     {isLoading ? (
-                      <ActivityIndicator color="#FFFFFF" size="small" />
+                      <ActivityIndicator
+                        color={authTheme.colors.buttonText}
+                        size="small"
+                      />
                     ) : (
                       <>
-                        <Ionicons name="send-outline" size={20} color="#FFFFFF" />
-                        <Text style={styles.resetButtonText}>Send Reset Link</Text>
+                        <Ionicons
+                          name="send-outline"
+                          size={20}
+                          color={authTheme.colors.buttonText}
+                        />
+                        <Text style={styles.buttonText}>Send Reset Link</Text>
                       </>
                     )}
                   </LinearGradient>
@@ -169,7 +231,11 @@ export default function ForgotPasswordScreen() {
                   style={styles.backToLogin}
                   onPress={() => router.replace("/(auth)/login")}
                 >
-                  <Ionicons name="arrow-back" size={16} color="#666666" />
+                  <Ionicons
+                    name="arrow-back"
+                    size={16}
+                    color={authTheme.colors.textSecondary}
+                  />
                   <Text style={styles.backToLoginText}>Back to Sign In</Text>
                 </TouchableOpacity>
               </View>
@@ -178,42 +244,89 @@ export default function ForgotPasswordScreen() {
             <>
               {/* Success State */}
               <View style={styles.successSection}>
-                <View style={styles.successIcon}>
-                  <Ionicons name="checkmark-circle" size={80} color="#4CAF50" />
+                <View style={styles.brandContainer}>
+                  <View style={styles.shineWrapper}>
+                    <Text style={styles.appName}>Check Your Email</Text>
+                    <Animated.View
+                      pointerEvents="none"
+                      style={[
+                        styles.shineOverlay,
+                        { transform: [{ translateX: shineAnim }] },
+                      ]}
+                    >
+                      <LinearGradient
+                        colors={[
+                          "transparent",
+                          "rgba(255,255,255,0.85)",
+                          "transparent",
+                        ]}
+                        style={styles.shineGradient}
+                      />
+                    </Animated.View>
+                  </View>
                 </View>
-                <Text style={styles.successTitle}>Check Your Email</Text>
-                <Text style={styles.successMessage}>
-                  We have sent password reset instructions to{"\n"}
-                  <Text style={styles.emailHighlight}>{email}</Text>
-                </Text>
-                <Text style={styles.instructions}>
-                  Please check your inbox and follow the link to reset your password. The link will expire in 1 hour.
-                </Text>
 
-                {/* Action Buttons */}
-                <View style={styles.actionButtons}>
-                  <TouchableOpacity
-                    style={styles.resendButton}
-                    onPress={handleResendEmail}
-                    disabled={isLoading}
-                  >
-                    <Text style={styles.resendButtonText}>
-                      {isLoading ? "Sending..." : "Resend Email"}
-                    </Text>
-                  </TouchableOpacity>
+                <View style={styles.successContent}>
+                  <View style={styles.successIcon}>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={80}
+                      color={authTheme.colors.primary || "#00BCD4"}
+                    />
+                  </View>
 
-                  <TouchableOpacity
-                    style={styles.backToLoginSuccess}
-                    onPress={() => router.replace("/(auth)/login")}
-                  >
-                    <Text style={styles.backToLoginSuccessText}>Back to Sign In</Text>
-                  </TouchableOpacity>
+                  <Text style={styles.successMessage}>
+                    We have sent password reset instructions to{"\n"}
+                    <Text style={styles.emailHighlight}>{email}</Text>
+                  </Text>
+                  <Text style={styles.instructions}>
+                    Please check your inbox and follow the link to reset your
+                    password. The link will expire in 1 hour.
+                  </Text>
+
+                  {/* Action Buttons */}
+                  <View style={styles.actionButtons}>
+                    <TouchableOpacity
+                      style={styles.resendButton}
+                      onPress={handleResendEmail}
+                      disabled={isLoading}
+                    >
+                      <LinearGradient
+                        colors={["#F8F9FA", "#F8F9FA"]}
+                        style={styles.resendButtonInner}
+                      >
+                        {isLoading ? (
+                          <ActivityIndicator
+                            color={authTheme.colors.textPrimary}
+                            size="small"
+                          />
+                        ) : (
+                          <Text style={styles.resendButtonText}>
+                            Resend Email
+                          </Text>
+                        )}
+                      </LinearGradient>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.backButtonSuccess}
+                      onPress={() => router.replace("/(auth)/login")}
+                    >
+                      <LinearGradient
+                        colors={["#000", "#333"]}
+                        style={styles.buttonInner}
+                      >
+                        <Text style={styles.buttonText}>Back to Sign In</Text>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
             </>
           )}
         </View>
       </KeyboardAvoidingView>
+      <Toast />
     </SafeAreaView>
   );
 }
@@ -221,158 +334,152 @@ export default function ForgotPasswordScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: authTheme.colors.background,
   },
-  loadingContainer: {
+  loading: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
-  },
-  keyboardView: {
-    flex: 1,
+    backgroundColor: authTheme.colors.background,
   },
   header: {
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 24,
     paddingTop: 16,
-    marginBottom: 40,
+    paddingBottom: 20,
   },
-  backButton: {
-    padding: 8,
-    marginRight: 16,
-  },
-  logo: {
+  logoRight: {
     width: 40,
     height: 40,
+    resizeMode: "contain",
   },
   content: {
     flex: 1,
     paddingHorizontal: 24,
+    minHeight: SCREEN_HEIGHT * 0.8,
   },
-  titleSection: {
-    marginBottom: 40,
+  brandContainer: {
+    alignItems: "center",
+    marginBottom: 36,
   },
-  title: {
-    fontSize: 32,
-    fontFamily: "Inter_700Bold",
-    color: "#1A1A1A",
-    marginBottom: 12,
+  appName: {
+    fontSize: authTheme.fontSizes.appName,
+    fontFamily: authTheme.fonts.bold,
+    letterSpacing: -0.6,
+    color: authTheme.colors.textPrimary,
+    textAlign: "center",
   },
   subtitle: {
-    fontSize: 16,
-    fontFamily: "Inter_400Regular",
-    color: "#666666",
+    marginTop: 6,
+    fontFamily: authTheme.fonts.regular,
+    fontSize: authTheme.fontSizes.subtitle,
+    color: authTheme.colors.textSecondary,
+    textAlign: "center",
     lineHeight: 22,
   },
-  formSection: {
-    flex: 1,
-  },
-  inputContainer: {
-    marginBottom: 32,
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
-    color: "#1A1A1A",
-    marginBottom: 8,
-  },
-  inputWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F8F9FA",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    paddingHorizontal: 16,
-    height: 56,
-  },
-  inputError: {
-    borderColor: "#FF3B30",
-  },
-  inputIcon: {
-    marginRight: 12,
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    fontFamily: "Inter_400Regular",
-    color: "#1A1A1A",
+  shineWrapper: { position: "relative", overflow: "hidden" },
+  shineOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: 90,
     height: "100%",
   },
-  errorText: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: "#FF3B30",
-    marginTop: 4,
-    marginLeft: 4,
+  shineGradient: { flex: 1, transform: [{ skewX: "-20deg" }] },
+  formContainer: { marginTop: 20 },
+  field: { marginBottom: 24 },
+  label: {
+    fontFamily: authTheme.fonts.semiBold,
+    fontSize: authTheme.fontSizes.label,
+    marginBottom: 8,
+    color: authTheme.colors.textPrimary,
   },
-  resetButton: {
-    borderRadius: 12,
+  inputBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: authTheme.colors.inputBg,
+    borderRadius: authTheme.borderRadius,
+    paddingHorizontal: 16,
+    height: 56,
+    borderWidth: 1,
+    borderColor: authTheme.colors.inputBorder,
+    gap: 10,
+  },
+  errorBorder: { borderColor: authTheme.colors.error },
+  input: {
+    flex: 1,
+    fontFamily: authTheme.fonts.regular,
+    fontSize: authTheme.fontSizes.input,
+    color: authTheme.colors.textPrimary,
+  },
+  error: {
+    color: authTheme.colors.error,
+    marginTop: 6,
+    fontSize: authTheme.fontSizes.error,
+    fontFamily: authTheme.fonts.regular,
+  },
+  button: {
+    borderRadius: authTheme.borderRadius,
     overflow: "hidden",
-    marginBottom: 24,
+    marginTop: 10,
   },
-  resetButtonDisabled: {
+  buttonDisabled: {
     opacity: 0.7,
   },
-  gradientButton: {
+  buttonInner: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 18,
-    paddingHorizontal: 24,
     gap: 8,
   },
-  resetButtonText: {
-    fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
-    color: "#FFFFFF",
+  buttonText: {
+    color: authTheme.colors.buttonText,
+    fontFamily: authTheme.fonts.semiBold,
+    fontSize: authTheme.fontSizes.button,
   },
   backToLogin: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     padding: 12,
+    marginTop: 20,
   },
   backToLoginText: {
-    fontSize: 14,
-    fontFamily: "Inter_500Medium",
-    color: "#666666",
+    fontSize: authTheme.fontSizes.small || 14,
+    fontFamily: authTheme.fonts.regular,
+    color: authTheme.colors.textSecondary,
     marginLeft: 8,
   },
   successSection: {
     flex: 1,
     alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 40,
+  },
+  successContent: {
+    alignItems: "center",
+    width: "100%",
   },
   successIcon: {
     marginBottom: 32,
   },
-  successTitle: {
-    fontSize: 28,
-    fontFamily: "Inter_700Bold",
-    color: "#1A1A1A",
-    marginBottom: 16,
-    textAlign: "center",
-  },
   successMessage: {
-    fontSize: 16,
-    fontFamily: "Inter_400Regular",
-    color: "#666666",
+    fontSize: authTheme.fontSizes.input || 16,
+    fontFamily: authTheme.fonts.regular,
+    color: authTheme.colors.textSecondary,
     textAlign: "center",
-    marginBottom: 24,
+    marginBottom: 16,
     lineHeight: 24,
   },
   emailHighlight: {
-    fontFamily: "Inter_600SemiBold",
-    color: "#1A1A1A",
+    fontFamily: authTheme.fonts.semiBold,
+    color: authTheme.colors.textPrimary,
   },
   instructions: {
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
-    color: "#999999",
+    fontSize: authTheme.fontSizes.small || 14,
+    fontFamily: authTheme.fonts.regular,
+    color: authTheme.colors.textSecondary,
     textAlign: "center",
     lineHeight: 20,
     marginBottom: 40,
@@ -383,27 +490,23 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   resendButton: {
-    backgroundColor: "#F8F9FA",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
+    borderRadius: authTheme.borderRadius,
+    overflow: "hidden",
+  },
+  resendButtonInner: {
     paddingVertical: 18,
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: authTheme.colors.inputBorder,
+    borderRadius: authTheme.borderRadius,
   },
   resendButtonText: {
-    fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
-    color: "#1A1A1A",
+    fontSize: authTheme.fontSizes.button,
+    fontFamily: authTheme.fonts.semiBold,
+    color: authTheme.colors.textPrimary,
   },
-  backToLoginSuccess: {
-    backgroundColor: "#000000",
-    borderRadius: 12,
-    paddingVertical: 18,
-    alignItems: "center",
-  },
-  backToLoginSuccessText: {
-    fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
-    color: "#FFFFFF",
+  backButtonSuccess: {
+    borderRadius: authTheme.borderRadius,
+    overflow: "hidden",
   },
 });

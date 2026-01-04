@@ -21,20 +21,20 @@ import {
   Check,
 } from "lucide-react-native";
 import React, { useState } from "react";
-import { useTheme } from "../../../src/context/ThemeContext";
+import { useTheme } from "@/src/context/ThemeContext";
 
 export default function ChangePasswordScreen() {
   const { theme, isDark } = useTheme();
   const styles = getStyles(theme.colors);
-  
+
   const router = useRouter();
-  
+
   const [formData, setFormData] = useState({
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
-  
+
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -52,40 +52,40 @@ export default function ChangePasswordScreen() {
       Alert.alert("Error", "Please enter your current password");
       return false;
     }
-    
+
     if (!formData.newPassword.trim()) {
       Alert.alert("Error", "Please enter a new password");
       return false;
     }
-    
+
     if (formData.newPassword.length < 8) {
       Alert.alert("Error", "New password must be at least 8 characters");
       return false;
     }
-    
+
     if (formData.newPassword !== formData.confirmPassword) {
       Alert.alert("Error", "Passwords do not match");
       return false;
     }
-    
+
     return true;
   };
 
   const handleChangePassword = async () => {
     if (!validateForm()) return;
-    
+
     setIsLoading(true);
-    
+
     try {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1500));
-      
+
       Alert.alert(
         "Success",
         "Password changed successfully!",
         [{ text: "OK", onPress: () => router.back() }]
       );
-    } catch (error) {
+    } catch {
       Alert.alert("Error", "Failed to change password. Please try again.");
     } finally {
       setIsLoading(false);
@@ -95,7 +95,7 @@ export default function ChangePasswordScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style={isDark ? "light" : "dark"} />
-      
+
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
@@ -105,9 +105,9 @@ export default function ChangePasswordScreen() {
           >
             <ArrowLeft size={24} color={theme.colors.text} />
           </TouchableOpacity>
-          
+
           <Text style={styles.headerTitle}>Change Password</Text>
-          
+
           <View style={{ width: 40 }} />
         </View>
       </View>
@@ -126,7 +126,7 @@ export default function ChangePasswordScreen() {
             {/* Info Message */}
             <View style={styles.infoBox}>
               <Text style={styles.infoText}>
-                For security reasons, you'll be asked to log in again after changing your password.
+                For security reasons, you&apos;ll be asked to log in again after changing your password.
               </Text>
             </View>
 

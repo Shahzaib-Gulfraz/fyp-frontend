@@ -15,7 +15,7 @@ import {
   Animated,
   Easing,
 } from "react-native";
-import { useAuth } from "../../src/context/AuthContext";
+import { useAuth } from "@/src/context/AuthContext";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -23,11 +23,12 @@ import { Ionicons } from "@expo/vector-icons";
 import {
   useFonts,
   Inter_400Regular,
-  Inter_500Medium,
   Inter_600SemiBold,
+  Inter_700Bold,
 } from "@expo-google-fonts/inter";
-import { MontserratAlternates_700Bold } from "@expo-google-fonts/montserrat-alternates";
 import Toast from "react-native-toast-message";
+// /(auth)/login.tsx or register.tsx
+import { authTheme } from "@/src/theme/authTheme";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -35,7 +36,6 @@ export default function LoginScreen() {
   const router = useRouter();
   const { setAuthenticated } = useAuth();
 
-  const [loginType, setLoginType] = useState<"user" | "shop">("user");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -43,44 +43,31 @@ export default function LoginScreen() {
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
 
+  const shineAnim = useRef(new Animated.Value(-120)).current;
+
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
-    Inter_500Medium,
     Inter_600SemiBold,
-    MontserratAlternates_700Bold,
+    Inter_700Bold,
   });
 
-  const shineAnim = useRef(new Animated.Value(-200)).current;
-
   useEffect(() => {
-    let isMounted = true;
-
-    const startAnimation = () => {
-      if (!isMounted) return;
-
-      shineAnim.setValue(-200);
+    const loop = () => {
+      shineAnim.setValue(-120);
       Animated.timing(shineAnim, {
-        toValue: 400,
-        duration: 1600,
+        toValue: 320,
+        duration: 1500,
         easing: Easing.inOut(Easing.ease),
         useNativeDriver: true,
-      }).start(() => {
-        setTimeout(() => {
-          if (isMounted) startAnimation();
-        }, 2500);
-      });
+      }).start(() => setTimeout(loop, 2200));
     };
-
-    startAnimation();
-    return () => {
-      isMounted = false;
-    };
+    loop();
   }, [shineAnim]);
 
   if (!fontsLoaded) {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator size="large" color="#000" />
+        <ActivityIndicator size="large" color={authTheme.colors.textPrimary} />
       </View>
     );
   }
@@ -90,20 +77,12 @@ export default function LoginScreen() {
     setEmailError("");
     setPasswordError("");
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    if (!email.trim()) {
+    if (!email) {
       setEmailError("Email is required");
-      valid = false;
-    } else if (!emailRegex.test(email)) {
-      setEmailError("Enter a valid email");
       valid = false;
     }
 
-    if (!password.trim()) {
-      setPasswordError("Password is required");
-      valid = false;
-    } else if (password.length < 8) {
+    if (!password || password.length < 8) {
       setPasswordError("Minimum 8 characters");
       valid = false;
     }
@@ -113,66 +92,25 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!validateForm()) return;
-
     setIsLoading(true);
-    console.log('🔵 Login started with email:', email);
 
     try {
-      // Import services dynamically to avoid circular dependencies
-      console.log('🔵 Importing services...');
-      const { authService, shopService } = await import('../../src/api');
-      console.log('✅ Services imported successfully');
+      const { authService } = await import("../../src/api");
+      const res = await authService.login(email, password);
 
-      // Call the appropriate API based on login type
-      console.log(`🔵 Calling ${loginType} login API...`);
-      let response;
-      if (loginType === 'user') {
-        response = await authService.login(email, password);
-      } else {
-        response = await shopService.loginShop(email, password);
-      }
-
-      console.log('✅ Login API response received');
-
-      // Show success toast
       Toast.show({
-        type: 'success',
-        text1: 'Login Successful',
-        text2: `Welcome back, ${loginType === 'user' ? (response.user?.fullName || 'User') : (response.shop?.shopName || 'Shop Owner')}!`,
-        position: 'top',
-        visibilityTime: 3000,
+        type: "success",
+        text1: "Login Successful",
+        text2: `Welcome back, ${res.user?.fullName || "User"}!`,
       });
 
-      // Sync with global auth state
-      setAuthenticated(true, loginType === 'user' ? 'user' : 'shop');
-
-      // Wait a bit to ensure token is saved
-      await new Promise(resolve => setTimeout(resolve, 300));
-
-      // Navigate based on type
-      if (loginType === 'user') {
-        router.replace("/(main)/home");
-      } else {
-        router.replace("/(main)/shop/dashboard");
-      }
-      console.log('✅ Navigation called');
-    } catch (error: any) {
-      console.error('❌ Login error:', error);
-      console.error('❌ Error status:', error.status);
-      console.error('❌ Error message:', error.message);
-      console.error('❌ Full error:', JSON.stringify(error, null, 2));
-
-      // Handle different error types
-      if (error.status === 401) {
-        Alert.alert("Login Failed", "Invalid email or password");
-      } else if (error.status === 0) {
-        Alert.alert("Network Error", "Please check your internet connection");
-      } else {
-        Alert.alert("Login Failed", error.message || "An error occurred");
-      }
+      setAuthenticated(true, "user");
+      await new Promise((r) => setTimeout(r, 300));
+      router.replace("/(main)/home");
+    } catch (e: any) {
+      Alert.alert("Login Failed", e.message || "Something went wrong");
     } finally {
       setIsLoading(false);
-      console.log('🔵 Login process completed, loading set to false');
     }
   };
 
@@ -182,19 +120,21 @@ export default function LoginScreen() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
       >
-        {/* 🔹 SCROLLABLE CONTENT */}
         <ScrollView
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
         >
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-              <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+            <TouchableOpacity onPress={() => router.push("splash")}>
+              <Ionicons
+                name="arrow-back"
+                size={24}
+                color={authTheme.colors.textPrimary}
+              />
             </TouchableOpacity>
             <Image
-              source={{ uri: "https://raw.githubusercontent.com/example/logo.png" }}
+              source={require("../../assets/images/logo-light.png")}
               style={styles.logo}
               contentFit="contain"
             />
@@ -203,7 +143,7 @@ export default function LoginScreen() {
           {/* Brand */}
           <View style={styles.brandContainer}>
             <View style={styles.shineWrapper}>
-              <Text style={styles.brandText}>Wearvirtually</Text>
+              <Text style={styles.appName}>Wear Virtually</Text>
               <Animated.View
                 pointerEvents="none"
                 style={[
@@ -214,108 +154,52 @@ export default function LoginScreen() {
                 <LinearGradient
                   colors={[
                     "transparent",
-                    "rgba(255,255,255,0.95)",
+                    "rgba(255,255,255,0.85)",
                     "transparent",
                   ]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
                   style={styles.shineGradient}
                 />
               </Animated.View>
             </View>
+
             <Text style={styles.subtitle}>
               Your virtual fashion destination
             </Text>
-
-            {/* Role Selection */}
-            <View style={styles.roleContainer}>
-              <TouchableOpacity
-                onPress={() => setLoginType("user")}
-                style={[
-                  styles.roleButton,
-                  loginType === "user" && styles.roleButtonActive,
-                ]}
-              >
-                <Ionicons
-                  name="person-outline"
-                  size={18}
-                  color={loginType === "user" ? "#FFFFFF" : "#666666"}
-                />
-                <Text
-                  style={[
-                    styles.roleText,
-                    loginType === "user" && styles.roleTextActive,
-                  ]}
-                >
-                  Customer
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setLoginType("shop")}
-                style={[
-                  styles.roleButton,
-                  loginType === "shop" && styles.roleButtonActive,
-                ]}
-              >
-                <Ionicons
-                  name="storefront-outline"
-                  size={18}
-                  color={loginType === "shop" ? "#FFFFFF" : "#666666"}
-                />
-                <Text
-                  style={[
-                    styles.roleText,
-                    loginType === "shop" && styles.roleTextActive,
-                  ]}
-                >
-                  Shop Owner
-                </Text>
-              </TouchableOpacity>
-            </View>
           </View>
 
           {/* Form */}
           <View style={styles.formContainer}>
-            {/* Email */}
             <View style={styles.field}>
               <Text style={styles.label}>Email</Text>
               <View style={[styles.inputBox, emailError && styles.errorBorder]}>
-                <Ionicons name="mail-outline" size={20} color="#777" style={styles.inputIcon} />
+                <Ionicons name="mail-outline" size={20} color="#777" />
                 <TextInput
                   style={styles.input}
                   placeholder="Enter your email"
-                  placeholderTextColor="#999"
                   value={email}
                   onChangeText={setEmail}
-                  keyboardType="email-address"
                   autoCapitalize="none"
-                  underlineColorAndroid="transparent" // ✅ remove Android rectangle
-
                 />
               </View>
               {!!emailError && <Text style={styles.error}>{emailError}</Text>}
             </View>
 
-            {/* Password */}
             <View style={styles.field}>
-              <View style={styles.passwordRow}>
-                <Text style={styles.label}>Password</Text>
-                <TouchableOpacity onPress={() => router.push("/(auth)/forgot-password")}>
-                  <Text style={styles.forgot}>Forgot?</Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={[styles.inputBox, passwordError && styles.errorBorder]}>
-                <Ionicons name="lock-closed-outline" size={20} color="#777" style={styles.inputIcon} />
+              <Text style={styles.label}>Password</Text>
+              <View
+                style={[styles.inputBox, passwordError && styles.errorBorder]}
+              >
+                <Ionicons name="lock-closed-outline" size={20} color="#777" />
                 <TextInput
                   style={styles.input}
                   placeholder="Enter your password"
-                  placeholderTextColor="#999"
                   secureTextEntry={!showPassword}
                   value={password}
                   onChangeText={setPassword}
                 />
-                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                <TouchableOpacity
+                  onPress={() => setShowPassword(!showPassword)}
+                >
                   <Ionicons
                     name={showPassword ? "eye-off-outline" : "eye-outline"}
                     size={20}
@@ -323,22 +207,31 @@ export default function LoginScreen() {
                   />
                 </TouchableOpacity>
               </View>
-              {!!passwordError && <Text style={styles.error}>{passwordError}</Text>}
+
+              {/* Forgot Password Link - Updated styling */}
+              <TouchableOpacity
+                style={styles.forgotPassword}
+                onPress={() => router.push("/(auth)/forgot-password")}
+              >
+                <Text style={styles.forgotPasswordText}>Forget Password?</Text>
+              </TouchableOpacity>
+
+              {!!passwordError && (
+                <Text style={styles.error}>{passwordError}</Text>
+              )}
             </View>
 
-            {/* Button */}
             <TouchableOpacity
-              disabled={isLoading}
               style={styles.button}
               onPress={handleLogin}
-              activeOpacity={0.9}
+              disabled={isLoading}
             >
               <LinearGradient
-                colors={["#000000", "#333333"]}
+                colors={["#000", "#333"]}
                 style={styles.buttonInner}
               >
                 {isLoading ? (
-                  <ActivityIndicator color="#fff" />
+                  <ActivityIndicator color={authTheme.colors.buttonText} />
                 ) : (
                   <Text style={styles.buttonText}>Sign In</Text>
                 )}
@@ -347,9 +240,9 @@ export default function LoginScreen() {
           </View>
         </ScrollView>
 
-        {/* 🔹 FIXED FOOTER */}
+        {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Don&apos;t have an account?</Text>
+          <Text style={styles.footerText}>Don’t have an account?</Text>
           <TouchableOpacity onPress={() => router.push("/(auth)/register")}>
             <Text style={styles.footerLink}> Sign Up</Text>
           </TouchableOpacity>
@@ -360,250 +253,127 @@ export default function LoginScreen() {
   );
 }
 
-
+/* ---------------- Styles ---------------- */
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff"
+    backgroundColor: authTheme.colors.background,
   },
-
-  loading: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center"
-  },
+  loading: { flex: 1, justifyContent: "center", alignItems: "center" },
 
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    minHeight: SCREEN_HEIGHT * 0.9, // Reduced to minimize scrolling
+    minHeight: SCREEN_HEIGHT * 0.9,
   },
 
   header: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
-    marginTop: 16,
-    marginBottom: 58, // Reduced
+    marginVertical: 20,
   },
 
-  backButton: {
-    padding: 8,
-  },
-
-  logo: {
-    width: 40,
-    height: 40
-  },
+  logo: { width: 40, height: 40 },
 
   brandContainer: {
     alignItems: "center",
-    marginTop: 20,
-    marginBottom: 24,
-    paddingHorizontal: 20,
+    marginBottom: 36,
   },
 
-  roleContainer: {
-    flexDirection: "row",
-    backgroundColor: "#F0F0F0",
-    borderRadius: 12,
-    padding: 4,
-    marginTop: 20,
-    width: "100%",
-  },
-
-  roleButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 10,
-    borderRadius: 8,
-    gap: 8,
-  },
-
-  roleButtonActive: {
-    backgroundColor: "#000000",
-  },
-
-  roleText: {
-    fontSize: 14,
-    fontFamily: "Inter_500Medium",
-    color: "#666666",
-  },
-
-  roleTextActive: {
-    color: "#FFFFFF",
-  },
-
-  shineWrapper: {
-    position: "relative",
-    overflow: "hidden",
-    paddingVertical: 2,
-    paddingHorizontal: 10,
-  },
-
-
-  brandText: {
-    fontSize: 38, // Slightly reduced
-    fontFamily: "MontserratAlternates_700Bold",
-    letterSpacing: 0.8,
-    color: "#1A1A1A",
+  appName: {
+    fontSize: authTheme.fontSizes.appName,
+    fontFamily: authTheme.fonts.bold,
+    letterSpacing: -0.6,
+    color: authTheme.colors.textPrimary,
     textAlign: "center",
   },
 
   subtitle: {
-    fontSize: 14, // Slightly reduced
-    fontFamily: "Inter_400Regular",
-    color: "#666",
     marginTop: 6,
-    textAlign: "center",
+    fontFamily: authTheme.fonts.regular,
+    color: authTheme.colors.textSecondary,
   },
 
+  shineWrapper: { position: "relative", overflow: "hidden" },
   shineOverlay: {
     position: "absolute",
     top: 0,
     left: 0,
+    width: 90,
     height: "100%",
-    width: 90, // 🔥 thinner = sharper shine
   },
+  shineGradient: { flex: 1, transform: [{ skewX: "-20deg" }] },
 
-
-  shineGradient: {
-    flex: 1,
-    transform: [{ skewX: "-20deg" }],
-    width: "100%",
-  },
-
-  formContainer: {
-    marginTop: 10, // Reduced gap between title and form
-    paddingHorizontal: 8,
-  },
-
-  field: {
-    marginBottom: 20, // Slightly reduced
-  },
+  formContainer: { marginTop: 10 },
+  field: { marginBottom: 20 },
 
   label: {
-    fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: authTheme.fonts.semiBold,
     marginBottom: 8,
-    color: "#1A1A1A",
-    letterSpacing: 0.2,
-  },
-
-  passwordRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-
-  forgot: {
-    fontSize: 13,
-    fontFamily: "Inter_500Medium",
-    color: "#666",
+    color: authTheme.colors.textPrimary,
   },
 
   inputBox: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F8F9FA",
-    borderRadius: 12,
+    backgroundColor: authTheme.colors.inputBg,
+    borderRadius: authTheme.borderRadius,
     paddingHorizontal: 16,
     height: 56,
     borderWidth: 1,
-    borderColor: "#E0E0E0",
+    borderColor: authTheme.colors.inputBorder,
+    gap: 10,
   },
 
-  inputIcon: {
-    marginRight: 12,
+  forgotPassword: {
+    alignSelf: "flex-end",
+    marginTop: 8,
+    marginBottom: 4,
+  },
+
+  forgotPasswordText: {
+    color: authTheme.colors.textSecondary,
+    fontFamily: authTheme.fonts.regular,
+    fontSize: authTheme.fontSizes.small || 12,
+    textDecorationLine: "none",
   },
 
   input: {
     flex: 1,
-    fontSize: 16,
-    fontFamily: "Inter_400Regular",
-    color: "#1A1A1A",
-    paddingVertical: 8,
-    // Remove default highlighting
-    ...Platform.select({
-      web: {
-        outlineStyle: 'none' as any,
-      },
-      ios: {
-        backgroundColor: 'transparent',
-      },
-      android: {
-        backgroundColor: 'transparent',
-      },
-    }),
+    fontFamily: authTheme.fonts.regular,
+    fontSize: authTheme.fontSizes.input,
   },
 
-  eyeButton: {
-    padding: 4,
-  },
-
-  errorBorder: {
-    borderColor: "#FF3B30",
-  },
-
+  errorBorder: { borderColor: authTheme.colors.error },
   error: {
+    color: authTheme.colors.error,
     marginTop: 6,
-    fontSize: 12,
-    color: "#FF3B30",
-    fontFamily: "Inter_400Regular",
-    marginLeft: 4,
+    fontSize: authTheme.fontSizes.error,
   },
 
   button: {
-    borderRadius: 12,
+    borderRadius: authTheme.borderRadius,
     overflow: "hidden",
-    marginTop: 8,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    marginTop: 10,
   },
-
-  buttonInner: {
-    paddingVertical: 18,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
+  buttonInner: { paddingVertical: 18, alignItems: "center" },
   buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
-    letterSpacing: 0.3,
-  },
-
-  spacer: {
-    height: 10, // Reduced space
+    color: authTheme.colors.buttonText,
+    fontFamily: authTheme.fonts.semiBold,
+    fontSize: authTheme.fontSizes.button,
   },
 
   footer: {
     flexDirection: "row",
     justifyContent: "center",
-    alignItems: "center",
     paddingVertical: 18,
     borderTopWidth: 1,
     borderTopColor: "#F0F0F0",
   },
 
-  footerText: {
-    fontFamily: "Inter_400Regular",
-    color: "#666",
-  },
-
-  signupButton: {
-    marginLeft: 4,
-  },
-
+  footerText: { color: authTheme.colors.textSecondary },
   footerLink: {
-    fontFamily: "Inter_600SemiBold",
-    color: "#1A1A1A",
+    fontFamily: authTheme.fonts.semiBold,
+    color: authTheme.colors.textPrimary,
   },
 });

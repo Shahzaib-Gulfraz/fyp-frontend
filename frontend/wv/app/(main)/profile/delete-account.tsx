@@ -20,14 +20,14 @@ import {
   ArrowLeft,
 } from "lucide-react-native";
 import React, { useState } from "react";
-import { useTheme } from "../../../src/context/ThemeContext";
+import { useTheme } from "@/src/context/ThemeContext";
 
 export default function DeleteAccountScreen() {
   const { theme, isDark } = useTheme();
   const styles = getStyles(theme.colors);
-  
+
   const router = useRouter();
-  
+
   const [password, setPassword] = useState("");
   const [confirmationText, setConfirmationText] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -56,35 +56,35 @@ export default function DeleteAccountScreen() {
       Alert.alert("Error", "Please enter your password");
       return false;
     }
-    
+
     if (confirmationText.toLowerCase() !== "delete my account") {
       Alert.alert("Error", "Please type 'delete my account' to confirm");
       return false;
     }
-    
+
     if (reasons.length === 0) {
       Alert.alert("Error", "Please select at least one reason");
       return false;
     }
-    
+
     return true;
   };
 
   const handleDeleteAccount = async () => {
     if (!validateForm()) return;
-    
+
     setIsLoading(true);
-    
+
     try {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
+
       Alert.alert(
         "Account Deleted",
         "Your account has been permanently deleted. We're sorry to see you go!",
         [{ text: "OK", onPress: () => router.replace("/login") }]
       );
-    } catch (error) {
+    } catch {
       Alert.alert("Error", "Failed to delete account. Please try again.");
     } finally {
       setIsLoading(false);
@@ -114,7 +114,7 @@ export default function DeleteAccountScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style={isDark ? "light" : "dark"} />
-      
+
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
@@ -124,9 +124,9 @@ export default function DeleteAccountScreen() {
           >
             <ArrowLeft size={24} color={theme.colors.text} />
           </TouchableOpacity>
-          
+
           <Text style={styles.headerTitle}>Delete Account</Text>
-          
+
           <View style={{ width: 40 }} />
         </View>
       </View>
@@ -212,7 +212,7 @@ export default function DeleteAccountScreen() {
           {/* Final Confirmation */}
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>
-              Type "delete my account" to confirm
+              Type &quot;delete my account&quot; to confirm
             </Text>
             <TextInput
               style={[

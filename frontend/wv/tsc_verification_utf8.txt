@@ -1,0 +1,16 @@
+﻿app/(main)/search/components/NoResults.tsx(19,45): error TS2339: Property 'divider' does not exist on type 'MD3Colors'.
+app/(main)/search/components/NoResults.tsx(20,66): error TS2339: Property 'text' does not exist on type 'MD3Colors'.
+app/(main)/search/components/NoResults.tsx(23,65): error TS2551: Property 'textSecondary' does not exist on type 'MD3Colors'. Did you mean 'secondary'?
+app/(main)/search/components/SearchHeader.tsx(25,39): error TS2339: Property 'divider' does not exist on type 'MD3Colors'.
+app/(main)/search/components/SearchHeader.tsx(34,38): error TS2339: Property 'border' does not exist on type 'MD3Colors'.
+app/(main)/search/components/SearchHeader.tsx(36,46): error TS2551: Property 'textSecondary' does not exist on type 'MD3Colors'. Did you mean 'secondary'?
+app/(main)/search/components/SearchHeader.tsx(39,34): error TS2339: Property 'text' does not exist on type 'MD3Colors'.
+app/(main)/search/components/SearchHeader.tsx(41,41): error TS2551: Property 'textSecondary' does not exist on type 'MD3Colors'. Did you mean 'secondary'?
+app/(main)/search/components/SearchHeader.tsx(44,83): error TS2551: Property 'textSecondary' does not exist on type 'MD3Colors'. Did you mean 'secondary'?
+app/(main)/search/components/SearchHeader.tsx(50,37): error TS2551: Property 'textSecondary' does not exist on type 'MD3Colors'. Did you mean 'secondary'?
+app/(main)/search/components/SearchTabs.tsx(38,39): error TS2551: Property 'textSecondary' does not exist on type 'MD3Colors'. Did you mean 'secondary'?
+app/(main)/search/components/TopShops.tsx(25,64): error TS2339: Property 'text' does not exist on type 'MD3Colors'.
+app/(main)/search/components/TopShops.tsx(41,43): error TS2339: Property 'border' does not exist on type 'MD3Colors'.
+app/(main)/search/components/TopShops.tsx(49,69): error TS2339: Property 'text' does not exist on type 'MD3Colors'.
+app/(main)/search/components/TopShops.tsx(52,74): error TS2551: Property 'textSecondary' does not exist on type 'MD3Colors'. Did you mean 'secondary'?
+app/(main)/search/components/TopShops.tsx(65,59): error TS2551: Property 'textSecondary' does not exist on type 'MD3Colors'. Did you mean 'secondary'?

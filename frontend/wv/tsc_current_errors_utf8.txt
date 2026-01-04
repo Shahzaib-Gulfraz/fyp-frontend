@@ -1,0 +1,15 @@
+﻿app/(main)/settings/SettingsScreen.tsx(35,11): error TS2304: Cannot find name 'Platform'.
+app/(main)/settings/SettingsScreen.tsx(59,13): error TS2304: Cannot find name 'Platform'.
+app/(main)/settings/SettingsScreen.tsx(73,13): error TS2304: Cannot find name 'Platform'.
+app/(main)/settings/SettingsScreen.tsx(89,11): error TS2304: Cannot find name 'Platform'.
+app/(main)/settings/SettingsScreen.tsx(102,25): error TS2304: Cannot find name 'Platform'.
+app/(main)/settings/SettingsScreen.tsx(164,10): error TS2304: Cannot find name 'View'.
+app/(main)/shop/addProduct/components/CatalogSection.tsx(3,8): error TS1192: Module '"C:/Users/hp/Documents/fyp/frontend/wv/app/(main)/shop/addProduct/components/ProductCardItem"' has no default export.
+app/(main)/shop/addProduct/components/ProductMetadataForm.tsx(28,37): error TS2339: Property 'spacing' does not exist on type 'MD3Theme'.
+app/(main)/shop/addProduct/components/Tabs.tsx(24,48): error TS2339: Property 'accent' does not exist on type 'MD3Colors'.
+app/(main)/shop/addProduct/components/Tabs.tsx(24,70): error TS2551: Property 'textSecondary' does not exist on type 'MD3Colors'. Did you mean 'secondary'?
+app/(main)/shop/addProduct/components/Upload3DSection.tsx(20,27): error TS2339: Property 'gradients' does not exist on type 'MD3Theme'.
+app/(main)/shop/addProduct/index.tsx(11,8): error TS1192: Module '"C:/Users/hp/Documents/fyp/frontend/wv/app/(main)/shop/addProduct/components/UploadExistingModel"' has no default export.
+app/(main)/shop/addProduct/index.tsx(12,8): error TS1192: Module '"C:/Users/hp/Documents/fyp/frontend/wv/app/(main)/shop/addProduct/components/UploadedFilesList"' has no default export.
+app/(main)/try-on/TryOnScreen.tsx(119,49): error TS2352: Conversion of type 'TryOnHistoryItem' to type 'ClothingItem' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type 'TryOnHistoryItem' is missing the following properties from type 'ClothingItem': rating, reviews, category, sizes, and 2 more.

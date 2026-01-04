@@ -24,19 +24,19 @@ import {
   AlertCircle,
 } from "lucide-react-native";
 import React, { useState } from "react";
-import { useTheme } from "../../../src/context/ThemeContext";
+import { useTheme } from "@/src/context/ThemeContext";
 
 export default function PrivacyScreen() {
   const { theme, isDark } = useTheme();
   const styles = getStyles(theme.colors);
-  
+
   const router = useRouter();
-  
+
   // Privacy settings state
   const [isPrivateAccount, setIsPrivateAccount] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
-  
+
   // Additional privacy toggles (optional)
   const [privacySettings, setPrivacySettings] = useState({
     showOnlineStatus: true,
@@ -50,21 +50,21 @@ export default function PrivacyScreen() {
       router.back();
       return;
     }
-    
+
     setIsLoading(true);
-    
+
     try {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       setHasChanges(false);
-      
+
       Alert.alert(
         "Success",
         "Privacy settings updated successfully!",
         [{ text: "OK", onPress: () => router.back() }]
       );
-    } catch (error) {
+    } catch {
       Alert.alert("Error", "Failed to update privacy settings. Please try again.");
     } finally {
       setIsLoading(false);
@@ -75,7 +75,7 @@ export default function PrivacyScreen() {
     if (isPrivateAccount !== value) {
       setIsPrivateAccount(value);
       setHasChanges(true);
-      
+
       // Show confirmation for making account private
       if (value) {
         Alert.alert(
@@ -87,11 +87,13 @@ export default function PrivacyScreen() {
           "• New followers need your approval\n\n" +
           "Do you want to continue?",
           [
-            { text: "Cancel", onPress: () => {
-              setIsPrivateAccount(false);
-              setHasChanges(false);
-            }},
-            { text: "Make Private", onPress: () => {} }
+            {
+              text: "Cancel", onPress: () => {
+                setIsPrivateAccount(false);
+                setHasChanges(false);
+              }
+            },
+            { text: "Make Private", onPress: () => { } }
           ]
         );
       }
@@ -135,15 +137,15 @@ export default function PrivacyScreen() {
         type === "private" && styles.iconContainerPrivate,
         isSelected && type === "private" && styles.iconContainerSelectedPrivate,
       ]}>
-        <Icon 
-          size={24} 
-          color={isSelected 
+        <Icon
+          size={24}
+          color={isSelected
             ? type === "private" ? "#FF6B6B" : "#00BCD4"
             : "#666"
-          } 
+          }
         />
       </View>
-      
+
       <View style={styles.privacyContent}>
         <View style={styles.privacyHeader}>
           <Text style={[
@@ -161,11 +163,11 @@ export default function PrivacyScreen() {
             </View>
           )}
         </View>
-        
+
         <Text style={styles.privacyDescription}>
           {description}
         </Text>
-        
+
         {type === "private" && isSelected && (
           <View style={styles.followerCount}>
             <Users size={14} color="#666" />
@@ -181,7 +183,7 @@ export default function PrivacyScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style={isDark ? "light" : "dark"} />
-      
+
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
@@ -191,9 +193,9 @@ export default function PrivacyScreen() {
           >
             <ArrowLeft size={24} color={theme.colors.text} />
           </TouchableOpacity>
-          
+
           <Text style={styles.headerTitle}>Account Privacy</Text>
-          
+
           <TouchableOpacity
             style={[
               styles.saveButton,
@@ -232,7 +234,7 @@ export default function PrivacyScreen() {
           <Text style={styles.sectionSubtitle}>
             Choose who can see your posts and follow you
           </Text>
-          
+
           <View style={styles.privacyOptions}>
             <PrivacyOption
               icon={Globe}
@@ -242,7 +244,7 @@ export default function PrivacyScreen() {
               onPress={() => togglePrivacy(false)}
               type="public"
             />
-            
+
             <PrivacyOption
               icon={Lock}
               title="Private Account"
@@ -252,7 +254,7 @@ export default function PrivacyScreen() {
               type="private"
             />
           </View>
-          
+
           {isPrivateAccount && (
             <View style={styles.privateInfoBox}>
               <AlertCircle size={18} color="#FF9800" />
@@ -260,7 +262,7 @@ export default function PrivacyScreen() {
                 <Text style={styles.privateInfoTitle}>Private Account Active</Text>
                 <Text style={styles.privateInfoText}>
                   New followers must send a request that you can approve or decline.
-                  Your existing followers won't be affected.
+                  Your existing followers won&apos;t be affected.
                 </Text>
               </View>
             </View>
@@ -270,7 +272,7 @@ export default function PrivacyScreen() {
         {/* Additional Privacy Settings */}
         <View style={styles.settingsSection}>
           <Text style={styles.sectionTitle}>Additional Settings</Text>
-          
+
           <View style={styles.settingItem}>
             <View style={styles.settingInfo}>
               <Eye size={20} color="#666" />
@@ -288,7 +290,7 @@ export default function PrivacyScreen() {
               thumbColor={privacySettings.showOnlineStatus ? '#00BCD4' : '#FFFFFF'}
             />
           </View>
-          
+
           <View style={styles.settingItem}>
             <View style={styles.settingInfo}>
               <UserCheck size={20} color="#666" />
@@ -306,7 +308,7 @@ export default function PrivacyScreen() {
               thumbColor={privacySettings.allowTagging ? '#00BCD4' : '#FFFFFF'}
             />
           </View>
-          
+
           <View style={styles.settingItem}>
             <View style={styles.settingInfo}>
               <EyeOff size={20} color="#666" />
@@ -551,5 +553,5 @@ const getStyles = (colors: any) =>
       fontSize: 13,
       color: "#666",
     },
-    
+
   });

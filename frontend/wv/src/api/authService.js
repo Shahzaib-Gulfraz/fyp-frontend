@@ -20,8 +20,8 @@ const authService = {
             }
 
             return response.data;
-        } catch (error) {
-            throw error;
+        } catch (_error) {
+            throw _error;
         }
     },
 
@@ -40,8 +40,8 @@ const authService = {
             }
 
             return response.data;
-        } catch (error) {
-            throw error;
+        } catch (_error) {
+            throw _error;
         }
     },
 
@@ -55,8 +55,8 @@ const authService = {
             await AsyncStorage.removeItem('user');
             await AsyncStorage.removeItem('userType');
             await AsyncStorage.removeItem('shop');
-        } catch (error) {
-            console.error('Logout error:', error);
+        } catch (_error) {
+            console.error('Logout error:', _error);
         }
     },
 
@@ -65,14 +65,21 @@ const authService = {
      */
     getProfile: async () => {
         try {
+            console.log('[AuthService] Fetching profile...');
             const response = await api.get('/auth/me');
+            console.log('[AuthService] Profile fetched successfully:', response.data);
 
             // Update stored user data
             await AsyncStorage.setItem('user', JSON.stringify(response.data.user));
 
             return response.data;
-        } catch (error) {
-            throw error;
+        } catch (_error) {
+            console.error('[AuthService] Error fetching profile:', _error);
+            if (_error.response) {
+                console.error('[AuthService] Response status:', _error.response.status);
+                console.error('[AuthService] Response data:', _error.response.data);
+            }
+            throw _error;
         }
     },
 
@@ -87,8 +94,8 @@ const authService = {
             await AsyncStorage.setItem('user', JSON.stringify(response.data.user));
 
             return response.data;
-        } catch (error) {
-            throw error;
+        } catch (_error) {
+            throw _error;
         }
     },
 
@@ -102,8 +109,8 @@ const authService = {
                 newPassword,
             });
             return response.data;
-        } catch (error) {
-            throw error;
+        } catch (_error) {
+            throw _error;
         }
     },
 
@@ -126,8 +133,8 @@ const authService = {
             });
 
             return response.data;
-        } catch (error) {
-            throw error;
+        } catch (_error) {
+            throw _error;
         }
     },
 
@@ -138,7 +145,7 @@ const authService = {
         try {
             const userJson = await AsyncStorage.getItem('user');
             return userJson ? JSON.parse(userJson) : null;
-        } catch (error) {
+        } catch (_error) {
             return null;
         }
     },
@@ -150,7 +157,7 @@ const authService = {
         try {
             const token = await AsyncStorage.getItem('authToken');
             return !!token;
-        } catch (error) {
+        } catch (_error) {
             return false;
         }
     },

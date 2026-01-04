@@ -1,189 +1,176 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useColorScheme, Appearance } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+// src/context/ThemeContext.tsx
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from "react";
+import { useColorScheme } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { MD3LightTheme, MD3DarkTheme, MD3Theme } from "react-native-paper";
+import { appTheme, AppThemeStructure, AppThemeGradients, AppThemeMode, AppThemeColors } from "@/src/theme/appTheme";
 
-// Define theme types
-export type ThemeMode = 'light' | 'dark' | 'system';
+import {
+  DefaultTheme as NavigationLight,
+  DarkTheme as NavigationDark,
+  Theme as NavigationTheme,
+} from "@react-navigation/native";
 
-// Define theme color palette
-export interface ThemeColors {
-  // Primary colors
-  primary: string;
-  primaryLight: string;
-  primaryDark: string;
 
-  // Background colors
-  background: string;
-  surface: string;
-  card: string;
+export type ThemeColors = AppThemeColors;
+export type ThemeMode = "light" | "dark" | "system";
 
-  // Text colors
-  text: string;
-  textSecondary: string;
-  textTertiary: string;
+export type AppThemeType = typeof appTheme.light & { gradients: { primary: string[]; accent: string[] } };
+export type AppTokensType = typeof appTheme.tokens;
 
-  // UI elements
-  border: string;
-  divider: string;
-  shadow: string;
-
-  // Status colors
-  success: string;
-  warning: string;
-  error: string;
-  info: string;
-
-  // Custom colors
-  accent: string;
-  accentLight: string;
-}
-
-// Define theme object
-export interface Theme {
-  colors: ThemeColors;
-  mode: ThemeMode;
-}
-
-// Predefined color palettes
-const lightColors: ThemeColors = {
-  primary: '#000000',
-  primaryLight: '#333333',
-  primaryDark: '#000000',
-
-  background: '#FFFFFF',
-  surface: '#F8F9FA',
-  card: '#FFFFFF',
-
-  text: '#1A1A1A',
-  textSecondary: '#666666',
-  textTertiary: '#999999',
-
-  border: '#E0E0E0',
-  divider: '#F0F0F0',
-  shadow: '#00000010',
-
-  success: '#4CAF50',
-  warning: '#FF9800',
-  error: '#FF5252',
-  info: '#2196F3',
-
-  accent: '#00BCD4',
-  accentLight: '#B2EBF2',
-};
-
-const darkColors: ThemeColors = {
-  primary: '#FFFFFF',
-  primaryLight: '#CCCCCC',
-  primaryDark: '#FFFFFF',
-
-  background: '#0F0F1E',
-  surface: '#1A1A2E',
-  card: '#16213E',
-
-  text: '#FFFFFF',
-  textSecondary: '#B0B0B0',
-  textTertiary: '#8A8AA3',
-
-  border: '#333344',
-  divider: '#2A2A3A',
-  shadow: '#00000040',
-
-  success: '#4CAF50',
-  warning: '#FF9800',
-  error: '#FF5252',
-  info: '#2196F3',
-
-  accent: '#00BCD4',
-  accentLight: '#004D40',
-};
-
-// Theme Context
 interface ThemeContextType {
-  theme: Theme;
   themeMode: ThemeMode;
+  resolvedTheme: "light" | "dark";
   isDark: boolean;
+  themeReady: boolean;
+
+  appTheme: AppThemeType;
+  theme: AppThemeType;
+  colors: ThemeColors; // Added for easy access
+  tokens: AppTokensType;
+  gradients: AppThemeType["gradients"];
+
+  paperTheme: MD3Theme;
+  navigationTheme: NavigationTheme;
+
   toggleTheme: () => void;
   setThemeMode: (mode: ThemeMode) => void;
 }
 
+/* ─────────────────────────────
+   Tokens (Global Design System)
+───────────────────────────── */
+const tokens = appTheme.tokens;
+
+/* ─────────────────────────────
+   Context
+───────────────────────────── */
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-// Theme Provider Component
-export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const systemColorScheme = useColorScheme();
-  const [themeMode, setThemeMode] = useState<ThemeMode>('light');
-  const [isDark, setIsDark] = useState(false);
+/* ─────────────────────────────
+   Provider
+───────────────────────────── */
+export const ThemeProvider = ({ children }: { children: ReactNode }) => {
+  const systemScheme = useColorScheme();
 
-  // Load saved theme from storage
-  useEffect(() => {
-    loadTheme();
-  }, []);
+  const [themeMode, setThemeModeState] = useState<ThemeMode>("light");
+  const [themeReady, setThemeReady] = useState(false);
 
-  // Update isDark based on theme mode
-  useEffect(() => {
-    if (themeMode === 'system') {
-      setIsDark(systemColorScheme === 'dark');
-    } else {
-      setIsDark(themeMode === 'dark');
-    }
-  }, [themeMode, systemColorScheme]);
+  /* Resolve final theme */
+  const isDark =
+    themeMode === "system" ? systemScheme === "dark" : themeMode === "dark";
+  const resolvedTheme: "light" | "dark" = isDark ? "dark" : "light";
 
-  const loadTheme = async () => {
-    try {
-      const savedTheme = await AsyncStorage.getItem('@wearvirtually_theme');
-      if (savedTheme) {
-        setThemeMode(savedTheme as ThemeMode);
-      }
-    } catch (error) {
-      console.log('Error loading theme:', error);
-    }
+  /* Current App Theme */
+  const currentAppTheme: AppThemeType = {
+    ...appTheme[resolvedTheme],
+    gradients: appTheme[resolvedTheme].gradients
   };
 
-  const saveTheme = async (mode: ThemeMode) => {
+  /* React Native Paper Theme */
+  const paperTheme: MD3Theme = {
+    ...(isDark ? MD3DarkTheme : MD3LightTheme),
+    colors: {
+      ...(isDark ? MD3DarkTheme.colors : MD3LightTheme.colors),
+      primary: currentAppTheme.colors.primary,
+      background: currentAppTheme.colors.background,
+      surface: currentAppTheme.colors.surface,
+      onSurface: currentAppTheme.colors.text,
+      outline: currentAppTheme.colors.border,
+      secondary: currentAppTheme.colors.accent,
+      error: currentAppTheme.colors.error,
+    },
+  };
+
+
+  /* React Navigation Theme */
+  const navigationTheme: NavigationTheme = {
+    ...(isDark ? NavigationDark : NavigationLight),
+    colors: {
+      ...(isDark ? NavigationDark.colors : NavigationLight.colors),
+      primary: currentAppTheme.colors.primary,
+      background: currentAppTheme.colors.background,
+      card: currentAppTheme.colors.surface,
+      text: currentAppTheme.colors.text,
+      border: currentAppTheme.colors.border,
+    },
+  };
+
+  /* Load saved theme */
+  useEffect(() => {
+    (async () => {
+      try {
+        const storedTheme = await AsyncStorage.getItem("@wearvirtually_theme");
+        if (storedTheme) {
+          setThemeModeState(storedTheme as ThemeMode);
+        }
+      } catch (e) {
+        console.log("Theme load error:", e);
+      } finally {
+        setThemeReady(true);
+      }
+    })();
+  }, []);
+
+  /* Persist Theme */
+  const persistTheme = async (mode: ThemeMode) => {
     try {
-      await AsyncStorage.setItem('@wearvirtually_theme', mode);
-    } catch (error) {
-      console.log('Error saving theme:', error);
+      await AsyncStorage.setItem("@wearvirtually_theme", mode);
+    } catch (e) {
+      console.log("Theme save error:", e);
     }
   };
 
   const toggleTheme = () => {
-    const newMode: ThemeMode = themeMode === 'dark' ? 'light' : 'dark';
-    setThemeMode(newMode);
-    saveTheme(newMode);
+    const next = isDark ? "light" : "dark";
+    setThemeModeState(next);
+    persistTheme(next);
   };
 
-  const handleSetThemeMode = (mode: ThemeMode) => {
-    setThemeMode(mode);
-    saveTheme(mode);
-  };
-
-  // Get current theme colors
-  const colors = isDark ? darkColors : lightColors;
-
-  const theme: Theme = {
-    colors,
-    mode: themeMode,
+  const setThemeMode = (mode: ThemeMode) => {
+    setThemeModeState(mode);
+    persistTheme(mode);
   };
 
   return (
-    <ThemeContext.Provider value={{
-      theme,
-      themeMode,
-      isDark,
-      toggleTheme,
-      setThemeMode: handleSetThemeMode,
-    }}>
+    <ThemeContext.Provider
+      value={{
+        themeMode,
+        resolvedTheme,
+        isDark,
+        themeReady,
+
+        appTheme: currentAppTheme,
+        theme: currentAppTheme,
+        colors: currentAppTheme.colors,
+        tokens,
+        gradients: currentAppTheme.gradients,
+
+        paperTheme,
+        navigationTheme,
+
+        toggleTheme,
+        setThemeMode,
+      }}
+    >
       {children}
     </ThemeContext.Provider>
   );
 };
 
-// Custom hook to use theme
+/* ─────────────────────────────
+   Hook
+───────────────────────────── */
 export const useTheme = () => {
   const context = useContext(ThemeContext);
   if (!context) {
-    throw new Error('useTheme must be used within ThemeProvider');
+    throw new Error("useTheme must be used within ThemeProvider");
   }
   return context;
 };

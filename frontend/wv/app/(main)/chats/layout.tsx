@@ -1,48 +1,48 @@
 import { Stack } from 'expo-router';
-import { useTheme } from '../../../src/context/ThemeContext';
+import { useTheme } from '@/src/context/ThemeContext';
 import { StatusBar } from 'expo-status-bar';
 
 export default function ChatsLayout() {
-    const { isDark, theme } = useTheme();
+  const { isDark, colors } = useTheme();
 
-    return (
-        <>
-            <StatusBar style={isDark ? 'light' : 'dark'} />
-            <Stack
-                screenOptions={{
-                    headerStyle: {
-                        backgroundColor: theme.colors.background,
-                    },
-                    headerTintColor: theme.colors.text,
-                    headerTitleStyle: {
-                        fontFamily: 'Inter_600SemiBold',
-                    },
-                    contentStyle: {
-                        backgroundColor: theme.colors.background,
-                    },
-                    headerShadowVisible: false,
-                }}
-            >
-                <Stack.Screen
-                    name="index"
-                    options={{
-                        headerShown: false
-                    }}
-                />
-                <Stack.Screen
-                    name="[id]"
-                    options={{
-                        headerShown: false
-                    }}
-                />
-                <Stack.Screen
-                    name="new"
-                    options={{
-                        presentation: 'modal',
-                        headerShown: false
-                    }}
-                />
-            </Stack>
-        </>
-    );
+  return (
+    <>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <Stack
+        screenOptions={{
+          headerStyle: {
+            backgroundColor: colors.background,
+          },
+          headerTintColor: colors.text,
+          headerTitleStyle: {
+            fontWeight: '600',
+          },
+          contentStyle: {
+            backgroundColor: colors.background,
+          },
+          headerShadowVisible: false,
+        }}
+      >
+        <Stack.Screen
+          name="index"
+          options={{
+            headerShown: false
+          }}
+        />
+        <Stack.Screen
+          name="[id]"
+          options={{
+            headerShown: false
+          }}
+        />
+        <Stack.Screen
+          name="new"
+          options={{
+            presentation: 'modal',
+            headerShown: false
+          }}
+        />
+      </Stack>
+    </>
+  );
 }

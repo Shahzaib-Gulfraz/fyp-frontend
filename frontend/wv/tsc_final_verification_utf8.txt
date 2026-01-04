@@ -1,0 +1,2 @@
+﻿app/(main)/shop/shopProfile/index.tsx(5,8): error TS1192: Module '"C:/Users/hp/Documents/fyp/frontend/wv/app/(main)/shop/shopProfile/EditProfileModal"' has no default export.
+app/(main)/shop/shopProfile/index.tsx(6,8): error TS1192: Module '"C:/Users/hp/Documents/fyp/frontend/wv/app/(main)/shop/shopProfile/ShareProfileModal"' has no default export.

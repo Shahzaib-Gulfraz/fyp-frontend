@@ -61,7 +61,7 @@ const businessHours = [
 export default function ContactUsScreen() {
   const { theme, isDark } = useTheme();
   const styles = getStyles(theme.colors);
-  
+
   const router = useRouter();
   const [formData, setFormData] = useState({
     name: "",
@@ -97,22 +97,24 @@ export default function ContactUsScreen() {
 
   const handleSubmit = async () => {
     if (!validateForm()) return;
-    
+
     setIsSubmitting(true);
-    
+
     try {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1500));
-      
+
       Alert.alert(
         "Message Sent",
         "Thank you for contacting us! We'll get back to you within 24 hours.",
-        [{ text: "OK", onPress: () => {
-          setFormData({ name: "", email: "", subject: "", message: "" });
-          router.back();
-        }}]
+        [{
+          text: "OK", onPress: () => {
+            setFormData({ name: "", email: "", subject: "", message: "" });
+            router.back();
+          }
+        }]
       );
-    } catch (error) {
+    } catch {
       Alert.alert("Error", "Failed to send message. Please try again.");
     } finally {
       setIsSubmitting(false);
@@ -122,7 +124,7 @@ export default function ContactUsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style={isDark ? "light" : "dark"} />
-      
+
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
@@ -132,9 +134,9 @@ export default function ContactUsScreen() {
           >
             <ArrowLeft size={24} color={theme.colors.text} />
           </TouchableOpacity>
-          
+
           <Text style={styles.headerTitle}>Contact Us</Text>
-          
+
           <View style={{ width: 40 }} />
         </View>
       </View>
@@ -168,7 +170,7 @@ export default function ContactUsScreen() {
         {/* Contact Form */}
         <View style={styles.formSection}>
           <Text style={styles.sectionTitle}>Send us a Message</Text>
-          
+
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Your Name</Text>
             <TextInput
@@ -179,7 +181,7 @@ export default function ContactUsScreen() {
               placeholderTextColor="#999"
             />
           </View>
-          
+
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Email Address</Text>
             <TextInput
@@ -192,7 +194,7 @@ export default function ContactUsScreen() {
               autoCapitalize="none"
             />
           </View>
-          
+
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Subject</Text>
             <TextInput
@@ -203,7 +205,7 @@ export default function ContactUsScreen() {
               placeholderTextColor="#999"
             />
           </View>
-          
+
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Message</Text>
             <TextInput
@@ -220,7 +222,7 @@ export default function ContactUsScreen() {
               {formData.message.length}/2000
             </Text>
           </View>
-          
+
           <TouchableOpacity
             style={[
               styles.submitButton,
@@ -243,7 +245,7 @@ export default function ContactUsScreen() {
         {/* Business Information */}
         <View style={styles.infoSection}>
           <Text style={styles.sectionTitle}>Business Information</Text>
-          
+
           <View style={styles.infoCard}>
             <View style={styles.infoItem}>
               <Clock size={20} color="#00BCD4" />
@@ -257,7 +259,7 @@ export default function ContactUsScreen() {
                 ))}
               </View>
             </View>
-            
+
             <View style={styles.infoItem}>
               <MapPin size={20} color="#00BCD4" />
               <View style={styles.infoContent}>
@@ -269,7 +271,7 @@ export default function ContactUsScreen() {
                 </Text>
               </View>
             </View>
-            
+
             <View style={styles.infoItem}>
               <Globe size={20} color="#00BCD4" />
               <View style={styles.infoContent}>

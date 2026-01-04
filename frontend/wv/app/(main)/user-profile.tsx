@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     View,
     Text,
@@ -45,11 +45,7 @@ export default function UserProfileScreen() {
         confirmPassword: '',
     });
 
-    useEffect(() => {
-        loadUserProfile();
-    }, []);
-
-    const loadUserProfile = async () => {
+    const loadUserProfile = useCallback(async () => {
         try {
             const { authService } = await import('../../src/api');
 
@@ -77,18 +73,23 @@ export default function UserProfileScreen() {
             }
         } catch (error: any) {
             console.error('Error loading profile:', error);
+            console.log('Error details:', JSON.stringify(error, null, 2));
 
             // If unauthorized, redirect to login
             if (error.response?.status === 401 || error.message?.includes('Not authorized')) {
                 Alert.alert('Session Expired', 'Please login again');
                 router.replace('/(auth)/login');
             } else {
-                Alert.alert('Error', 'Failed to load profile');
+                Alert.alert('Error', 'Failed to load profile. Check console for details.');
             }
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [router]);
+
+    useEffect(() => {
+        loadUserProfile();
+    }, [loadUserProfile]);
 
     const handleUpdateProfile = async () => {
         setIsUpdating(true);

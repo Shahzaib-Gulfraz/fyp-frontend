@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -9,9 +9,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert,
   ActivityIndicator,
-  Switch,
+  Dimensions,
+  Animated,
+  Easing,
 } from "react-native";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
@@ -20,10 +21,13 @@ import { Ionicons } from "@expo/vector-icons";
 import {
   useFonts,
   Inter_400Regular,
-  Inter_500Medium,
   Inter_600SemiBold,
   Inter_700Bold,
 } from "@expo-google-fonts/inter";
+import Toast from "react-native-toast-message";
+import { authTheme } from "../../src/theme/authTheme";
+
+const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 type UserRole = "user" | "shop_owner";
 
@@ -49,15 +53,36 @@ export default function RegisterScreen() {
   const [confirmPasswordError, setConfirmPasswordError] = useState("");
   const [phoneError, setPhoneError] = useState("");
 
+  const shineAnim = useRef(new Animated.Value(-120)).current;
+
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
-    Inter_500Medium,
     Inter_600SemiBold,
     Inter_700Bold,
   });
 
+  useEffect(() => {
+    const loop = () => {
+      shineAnim.setValue(-120);
+      Animated.timing(shineAnim, {
+        toValue: 320,
+        duration: 1500,
+        easing: Easing.inOut(Easing.ease),
+        useNativeDriver: true,
+      }).start(() => setTimeout(loop, 2200));
+    };
+    loop();
+  }, [shineAnim]);
+
+  if (!fontsLoaded) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator size="large" color={authTheme.colors.textPrimary} />
+      </View>
+    );
+  }
+
   const validateUsername = (username: string) => {
-    // Username validation rules
     const usernameRegex = /^[a-zA-Z0-9_.]+$/;
 
     if (!username.trim()) {
@@ -175,10 +200,11 @@ export default function RegisterScreen() {
 
     // Terms agreement check
     if (!agreedToTerms) {
-      Alert.alert(
-        "Terms Required",
-        "You must agree to the Terms of Service and Privacy Policy."
-      );
+      Toast.show({
+        type: 'error',
+        text1: 'Terms Required',
+        text2: 'You must agree to the Terms of Service and Privacy Policy.',
+      });
       isValid = false;
     }
 
@@ -190,10 +216,8 @@ export default function RegisterScreen() {
 
     setIsLoading(true);
     try {
-      // Import authService dynamically
-      const { authService } = await import('../../src/api');
+      const { authService } = await import("../../src/api");
 
-      // Prepare user data
       const userData = {
         fullName,
         email,
@@ -211,56 +235,52 @@ export default function RegisterScreen() {
         role: userRole,
       });
 
-      // Call the real API
       const response = await authService.register(userData);
 
-      console.log('Registration successful:', response.user);
+      console.log("Registration successful:", response.user);
 
-      // Verify token was saved
-      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
-      const savedToken = await AsyncStorage.getItem('authToken');
-      console.log('Token saved after registration:', !!savedToken);
+      const AsyncStorage = (
+        await import("@react-native-async-storage/async-storage")
+      ).default;
+      const savedToken = await AsyncStorage.getItem("authToken");
+      console.log("Token saved after registration:", !!savedToken);
 
-      // If user is shop owner, redirect to shop registration
-      if (userRole === 'shop_owner') {
-        Alert.alert(
-          "Account Created!",
-          "Now let's set up your shop.",
-          [
-            {
-              text: "Continue",
-              onPress: () => router.replace("/(auth)/shop-register"),
-            },
-          ]
-        );
+      Toast.show({
+        type: 'success',
+        text1: 'Registration Successful',
+        text2: `Welcome to Wear Virtually, ${fullName}!`,
+      });
+
+      if (userRole === "shop_owner") {
+        // For shop owners, redirect to shop registration
+        setTimeout(() => {
+          router.replace("/(auth)/shop-register");
+        }, 1000);
       } else {
-        // For regular users, go to login
-        Alert.alert(
-          "Registration Successful",
-          "Your account has been created successfully!",
-          [
-            {
-              text: "OK",
-              onPress: () => router.replace("/(main)/home"),
-            },
-          ]
-        );
+        // For regular users, go to home
+        setTimeout(() => {
+          router.replace("/(main)/home");
+        }, 1000);
       }
     } catch (error: any) {
-      // Handle different error types
       if (error.status === 400) {
-        // Validation error or duplicate user
-        Alert.alert(
-          "Registration Failed",
-          error.message || "Email or username already exists"
-        );
+        Toast.show({
+          type: 'error',
+          text1: 'Registration Failed',
+          text2: error.message || 'Email or username already exists',
+        });
       } else if (error.status === 0) {
-        Alert.alert("Network Error", "Please check your internet connection");
+        Toast.show({
+          type: 'error',
+          text1: 'Network Error',
+          text2: 'Please check your internet connection',
+        });
       } else {
-        Alert.alert(
-          "Registration Failed",
-          error.message || "An error occurred during registration. Please try again."
-        );
+        Toast.show({
+          type: 'error',
+          text1: 'Registration Failed',
+          text2: error.message || 'An error occurred during registration. Please try again.',
+        });
       }
     } finally {
       setIsLoading(false);
@@ -269,50 +289,52 @@ export default function RegisterScreen() {
 
   const handleRoleSelection = (role: UserRole) => {
     setUserRole(role);
-  };
 
-  if (!fontsLoaded) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#000000" />
-      </View>
-    );
-  }
+    if (role === "shop_owner") {
+      router.replace("/(auth)/shop-register");
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.keyboardView}
+        style={{ flex: 1 }}
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => router.push("/login")}
-            >
-              <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+            <TouchableOpacity onPress={() => router.push("/(auth)/login")}>
+              <Ionicons
+                name="arrow-back"
+                size={24}
+                color={authTheme.colors.textPrimary}
+              />
             </TouchableOpacity>
             <Image
-              source={{
-                uri: "https://raw.githubusercontent.com/example/logo.png",
-              }}
+              source={require("../../assets/images/logo-light.png")}
               style={styles.logo}
               contentFit="contain"
             />
           </View>
 
-          {/* Title Section */}
-          <View style={styles.titleSection}>
-            <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>
-              Join the future of virtual fashion shopping
-            </Text>
+          {/* Brand */}
+          <View style={styles.brandContainer}>
+            <View style={styles.shineWrapper}>
+              <Text style={styles.appName}>Create Account</Text>
+              <Animated.View
+                pointerEvents="none"
+                style={[styles.shineOverlay, { transform: [{ translateX: shineAnim }] }]}
+              >
+                <LinearGradient
+                  colors={["transparent", "rgba(255,255,255,0.85)", "transparent"]}
+                  style={styles.shineGradient}
+                />
+              </Animated.View>
+            </View>
+
+            <Text style={styles.subtitle}>Join our fashion community</Text>
           </View>
 
           {/* Role Selection */}
@@ -328,8 +350,8 @@ export default function RegisterScreen() {
               >
                 <Ionicons
                   name="person-outline"
-                  size={24}
-                  color={userRole === "user" ? "#FFFFFF" : "#666666"}
+                  size={20}
+                  color={userRole === "user" ? authTheme.colors.buttonText : authTheme.colors.textSecondary}
                 />
                 <Text
                   style={[
@@ -346,15 +368,12 @@ export default function RegisterScreen() {
                   styles.roleButton,
                   userRole === "shop_owner" && styles.roleButtonActive,
                 ]}
-                onPress={() => {
-                  handleRoleSelection("shop_owner");
-                  router.push("/shop-register");
-                }}
+                onPress={() => handleRoleSelection("shop_owner")}
               >
                 <Ionicons
                   name="storefront-outline"
-                  size={24}
-                  color={userRole === "shop_owner" ? "#FFFFFF" : "#666666"}
+                  size={20}
+                  color={userRole === "shop_owner" ? authTheme.colors.buttonText : authTheme.colors.textSecondary}
                 />
                 <Text
                   style={[
@@ -368,544 +387,386 @@ export default function RegisterScreen() {
             </View>
           </View>
 
-          {/* Form Section */}
-          <View style={styles.formSection}>
-            {/* Full Name Input */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Full Name</Text>
-              <View
-                style={[
-                  styles.inputWrapper,
-                  fullNameError ? styles.inputError : null,
-                ]}
-              >
-                <Ionicons
-                  name="person-outline"
-                  size={20}
-                  color="#666666"
-                  style={styles.inputIcon}
-                />
+          {/* Form */}
+          <View style={styles.formContainer}>
+            <View style={styles.field}>
+              <Text style={styles.label}>Full Name</Text>
+              <View style={[styles.inputBox, fullNameError && styles.errorBorder]}>
+                <Ionicons name="person-outline" size={20} color="#777" />
                 <TextInput
                   style={styles.input}
                   placeholder="Enter your full name"
-                  placeholderTextColor="#999999"
                   value={fullName}
                   onChangeText={(text) => {
                     setFullName(text);
                     setFullNameError("");
                   }}
                   autoCapitalize="words"
-                  editable={!isLoading}
-                  cursorColor="#1A1A1A"
-                  selectionColor="rgba(0,0,0,0.1)"
-                  {...(Platform.OS === "android" && {
-                    underlineColorAndroid: "transparent",
-                  })}
                 />
               </View>
-              {fullNameError ? (
-                <Text style={styles.errorText}>{fullNameError}</Text>
-              ) : null}
+              {!!fullNameError && <Text style={styles.error}>{fullNameError}</Text>}
             </View>
 
-            {/* Email Input */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Email Address</Text>
-              <View
-                style={[
-                  styles.inputWrapper,
-                  emailError ? styles.inputError : null,
-                ]}
-              >
-                <Ionicons
-                  name="mail-outline"
-                  size={20}
-                  color="#666666"
-                  style={styles.inputIcon}
-                />
+            <View style={styles.field}>
+              <Text style={styles.label}>Email</Text>
+              <View style={[styles.inputBox, emailError && styles.errorBorder]}>
+                <Ionicons name="mail-outline" size={20} color="#777" />
                 <TextInput
                   style={styles.input}
                   placeholder="Enter your email"
-                  placeholderTextColor="#999999"
                   value={email}
                   onChangeText={(text) => {
                     setEmail(text);
                     setEmailError("");
                   }}
-                  keyboardType="email-address"
                   autoCapitalize="none"
-                  autoCorrect={false}
-                  editable={!isLoading}
-                  cursorColor="#1A1A1A"
-                  selectionColor="rgba(0,0,0,0.1)"
-                  {...(Platform.OS === "android" && {
-                    underlineColorAndroid: "transparent",
-                  })}
+                  keyboardType="email-address"
                 />
               </View>
-              {emailError ? (
-                <Text style={styles.errorText}>{emailError}</Text>
-              ) : null}
+              {!!emailError && <Text style={styles.error}>{emailError}</Text>}
             </View>
 
-            {/* Username Input */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Username</Text>
-              <View
-                style={[
-                  styles.inputWrapper,
-                  usernameError ? styles.inputError : null,
-                ]}
-              >
-                <Ionicons
-                  name="at-outline"
-                  size={20}
-                  color="#666666"
-                  style={styles.inputIcon}
-                />
+            <View style={styles.field}>
+              <Text style={styles.label}>Username</Text>
+              <View style={[styles.inputBox, usernameError && styles.errorBorder]}>
+                <Ionicons name="at-outline" size={20} color="#777" />
                 <TextInput
                   style={styles.input}
                   placeholder="Choose a unique username"
-                  placeholderTextColor="#999999"
                   value={username}
                   onChangeText={(text) => {
-                    // Convert to lowercase and remove spaces
-                    const formattedText = text
-                      .toLowerCase()
-                      .replace(/\s+/g, "");
+                    const formattedText = text.toLowerCase().replace(/\s+/g, "");
                     setUsername(formattedText);
                     setUsernameError("");
                   }}
                   autoCapitalize="none"
                   autoCorrect={false}
-                  editable={!isLoading}
-                  cursorColor="#1A1A1A"
-                  selectionColor="rgba(0,0,0,0.1)"
-                  {...(Platform.OS === "android" && {
-                    underlineColorAndroid: "transparent",
-                  })}
                 />
               </View>
-              {usernameError ? (
-                <Text style={styles.errorText}>{usernameError}</Text>
-              ) : null}
-              <Text style={styles.usernameHint}>
+              {!!usernameError && <Text style={styles.error}>{usernameError}</Text>}
+              <Text style={styles.hintText}>
                 Only letters, numbers, _ and . are allowed
               </Text>
             </View>
 
-            {/* Phone Input (Optional) */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Phone Number</Text>
-              <View
-                style={[
-                  styles.inputWrapper,
-                  phoneError ? styles.inputError : null,
-                ]}
-              >
-                <Ionicons
-                  name="call-outline"
-                  size={20}
-                  color="#666666"
-                  style={styles.inputIcon}
-                />
+            <View style={styles.field}>
+              <Text style={styles.label}>Phone Number</Text>
+              <View style={[styles.inputBox, phoneError && styles.errorBorder]}>
+                <Ionicons name="call-outline" size={20} color="#777" />
                 <TextInput
                   style={styles.input}
                   placeholder="+92 300 1234567"
-                  placeholderTextColor="#999999"
                   value={phone}
                   onChangeText={(text) => {
                     setPhone(text);
                     setPhoneError("");
                   }}
                   keyboardType="phone-pad"
-                  editable={!isLoading}
-                  cursorColor="#1A1A1A"
-                  selectionColor="rgba(0,0,0,0.1)"
-                  {...(Platform.OS === "android" && {
-                    underlineColorAndroid: "transparent",
-                  })}
                 />
               </View>
-              {phoneError ? (
-                <Text style={styles.errorText}>{phoneError}</Text>
-              ) : null}
+              {!!phoneError && <Text style={styles.error}>{phoneError}</Text>}
             </View>
 
-            {/* Password Input */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Password</Text>
-              <View
-                style={[
-                  styles.inputWrapper,
-                  passwordError ? styles.inputError : null,
-                ]}
-              >
-                <Ionicons
-                  name="lock-closed-outline"
-                  size={20}
-                  color="#666666"
-                  style={styles.inputIcon}
-                />
+            <View style={styles.field}>
+              <Text style={styles.label}>Password</Text>
+              <View style={[styles.inputBox, passwordError && styles.errorBorder]}>
+                <Ionicons name="lock-closed-outline" size={20} color="#777" />
                 <TextInput
                   style={styles.input}
                   placeholder="Create a strong password"
-                  placeholderTextColor="#999999"
+                  secureTextEntry={!showPassword}
                   value={password}
                   onChangeText={(text) => {
                     setPassword(text);
                     setPasswordError("");
                   }}
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  editable={!isLoading}
-                  cursorColor="#1A1A1A"
-                  selectionColor="rgba(0,0,0,0.1)"
-                  {...(Platform.OS === "android" && {
-                    underlineColorAndroid: "transparent",
-                  })}
                 />
-                <TouchableOpacity
-                  onPress={() => setShowPassword(!showPassword)}
-                  style={styles.eyeIcon}
-                >
+                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
                   <Ionicons
                     name={showPassword ? "eye-off-outline" : "eye-outline"}
                     size={20}
-                    color="#666666"
+                    color="#777"
                   />
                 </TouchableOpacity>
               </View>
-              {passwordError ? (
-                <Text style={styles.errorText}>{passwordError}</Text>
-              ) : null}
-              <Text style={styles.passwordHint}>
+              {!!passwordError && <Text style={styles.error}>{passwordError}</Text>}
+              <Text style={styles.hintText}>
                 Must include uppercase, lowercase, number, and special character
               </Text>
             </View>
 
-            {/* Confirm Password Input */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Confirm Password</Text>
-              <View
-                style={[
-                  styles.inputWrapper,
-                  confirmPasswordError ? styles.inputError : null,
-                ]}
-              >
-                <Ionicons
-                  name="lock-closed-outline"
-                  size={20}
-                  color="#666666"
-                  style={styles.inputIcon}
-                />
+            <View style={styles.field}>
+              <Text style={styles.label}>Confirm Password</Text>
+              <View style={[styles.inputBox, confirmPasswordError && styles.errorBorder]}>
+                <Ionicons name="lock-closed-outline" size={20} color="#777" />
                 <TextInput
                   style={styles.input}
                   placeholder="Re-enter your password"
-                  placeholderTextColor="#999999"
+                  secureTextEntry={!showConfirmPassword}
                   value={confirmPassword}
                   onChangeText={(text) => {
                     setConfirmPassword(text);
                     setConfirmPasswordError("");
                   }}
-                  secureTextEntry={!showConfirmPassword}
-                  autoCapitalize="none"
-                  editable={!isLoading}
-                  cursorColor="#1A1A1A"
-                  selectionColor="rgba(0,0,0,0.1)"
-                  {...(Platform.OS === "android" && {
-                    underlineColorAndroid: "transparent",
-                  })}
                 />
-                <TouchableOpacity
-                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                  style={styles.eyeIcon}
-                >
+                <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
                   <Ionicons
-                    name={
-                      showConfirmPassword ? "eye-off-outline" : "eye-outline"
-                    }
+                    name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
                     size={20}
-                    color="#666666"
+                    color="#777"
                   />
                 </TouchableOpacity>
               </View>
-              {confirmPasswordError ? (
-                <Text style={styles.errorText}>{confirmPasswordError}</Text>
-              ) : null}
+              {!!confirmPasswordError && <Text style={styles.error}>{confirmPasswordError}</Text>}
             </View>
 
             {/* Terms Agreement */}
             <View style={styles.termsAgreement}>
-              <Switch
-                value={agreedToTerms}
-                onValueChange={setAgreedToTerms}
-                trackColor={{ false: "#877c7cff", true: "#000000" }}
-                thumbColor={agreedToTerms ? "#FFFFFF" : "#FFFFFF"}
-                ios_backgroundColor="#877c7cff"
-                style={styles.switch}
-              />
-
-              <Text style={styles.termsText}>
-                I agree to the{" "}
-                <Text style={styles.termsLink}>Terms of Service</Text> and{" "}
-                <Text style={styles.termsLink}>Privacy Policy</Text>
-              </Text>
+              <TouchableOpacity
+                style={styles.checkbox}
+                onPress={() => setAgreedToTerms(!agreedToTerms)}
+              >
+                <View
+                  style={[
+                    styles.checkboxInner,
+                    agreedToTerms && styles.checkboxInnerChecked,
+                  ]}
+                >
+                  {agreedToTerms && (
+                    <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                  )}
+                </View>
+                <Text style={styles.termsText}>
+                  I agree to the{" "}
+                  <Text style={styles.termsLink}>Terms of Service</Text> and{" "}
+                  <Text style={styles.termsLink}>Privacy Policy</Text>
+                </Text>
+              </TouchableOpacity>
             </View>
 
-            {/* Register Button */}
             <TouchableOpacity
-              style={[
-                styles.registerButton,
-                isLoading ? styles.registerButtonDisabled : null,
-              ]}
+              style={styles.button}
               onPress={handleRegister}
               disabled={isLoading}
             >
-              <LinearGradient
-                colors={["#000000", "#333333"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.gradientButton}
-              >
+              <LinearGradient colors={["#000", "#333"]} style={styles.buttonInner}>
                 {isLoading ? (
-                  <ActivityIndicator color="#FFFFFF" size="small" />
+                  <ActivityIndicator color={authTheme.colors.buttonText} />
                 ) : (
-                  <>
-                    <Ionicons
-                      name="person-add-outline"
-                      size={20}
-                      color="#FFFFFF"
-                    />
-
-                    <Text style={styles.registerButtonText}>
-                      Create Account
-                    </Text>
-                  </>
+                  <Text style={styles.buttonText}>Create Account</Text>
                 )}
               </LinearGradient>
             </TouchableOpacity>
           </View>
-
-          {/* Login Link */}
-          <View style={styles.loginContainer}>
-            <Text style={styles.loginText}>Already have an account? </Text>
-            <TouchableOpacity onPress={() => router.replace("/(auth)/login")}>
-              <Text style={styles.loginLink}>Sign In</Text>
-            </TouchableOpacity>
-          </View>
         </ScrollView>
+
+        {/* Footer */}
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>Already have an account?</Text>
+          <TouchableOpacity onPress={() => router.push("/(auth)/login")}>
+            <Text style={styles.footerLink}> Sign In</Text>
+          </TouchableOpacity>
+        </View>
       </KeyboardAvoidingView>
+      <Toast />
     </SafeAreaView>
   );
 }
 
+/* ---------------- Styles ---------------- */
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: authTheme.colors.background,
   },
-  loadingContainer: {
+  loading: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: authTheme.colors.background,
   },
-  keyboardView: {
-    flex: 1,
-  },
+
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingBottom: 40,
+    minHeight: SCREEN_HEIGHT * 0.9,
   },
+
   header: {
     flexDirection: "row",
+    justifyContent: "space-between",
+    marginVertical: 20,
+  },
+
+  logo: { width: 40, height: 40 },
+
+  brandContainer: {
     alignItems: "center",
-    paddingTop: 16,
     marginBottom: 20,
   },
-  backButton: {
-    padding: 8,
-    marginRight: 16,
+
+  appName: {
+    fontSize: authTheme.fontSizes.appName,
+    fontFamily: authTheme.fonts.bold,
+    letterSpacing: -0.6,
+    color: authTheme.colors.textPrimary,
+    textAlign: "center",
   },
-  logo: {
-    width: 40,
-    height: 40,
-  },
-  titleSection: {
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 32,
-    fontFamily: "Inter_700Bold",
-    color: "#1A1A1A",
-    marginBottom: 8,
-  },
+
   subtitle: {
-    fontSize: 16,
-    fontFamily: "Inter_400Regular",
-    color: "#666666",
-    lineHeight: 22,
+    marginTop: 6,
+    fontFamily: authTheme.fonts.regular,
+    fontSize: authTheme.fontSizes.subtitle,
+    color: authTheme.colors.textSecondary,
   },
+
+  shineWrapper: { position: "relative", overflow: "hidden" },
+  shineOverlay: { position: "absolute", top: 0, left: 0, width: 90, height: "100%" },
+  shineGradient: { flex: 1, transform: [{ skewX: "-20deg" }] },
+
   roleSection: {
-    marginBottom: 25,
+    marginBottom: 20,
   },
   roleTitle: {
-    fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
-    color: "#1A1A1A",
+    fontSize: authTheme.fontSizes.label,
+    fontFamily: authTheme.fonts.semiBold,
+    color: authTheme.colors.textPrimary,
     marginBottom: 12,
   },
   roleButtons: {
     flexDirection: "row",
-    justifyContent: "space-between",
     gap: 12,
   },
   roleButton: {
     flex: 1,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#F8F9FA",
-    borderRadius: 12,
+    backgroundColor: authTheme.colors.inputBg,
+    borderRadius: authTheme.borderRadius,
     borderWidth: 1,
-    borderColor: "#E0E0E0",
-    paddingVertical: 16,
+    borderColor: authTheme.colors.inputBorder,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     gap: 8,
   },
   roleButtonActive: {
-    backgroundColor: "#000000",
-    borderColor: "#000000",
+    backgroundColor: authTheme.colors.textPrimary,
+    borderColor: authTheme.colors.textPrimary,
   },
   roleButtonText: {
     fontSize: 14,
-    fontFamily: "Inter_500Medium",
-    color: "#666666",
+    fontFamily: authTheme.fonts.semiBold,
+    color: authTheme.colors.textSecondary,
   },
   roleButtonTextActive: {
-    color: "#FFFFFF",
+    color: authTheme.colors.buttonText,
   },
-  formSection: {
-    marginBottom: 32,
-  },
-  inputContainer: {
-    marginBottom: 20,
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
-    color: "#1A1A1A",
+
+  formContainer: { marginTop: 10 },
+  field: { marginBottom: 20 },
+
+  label: {
+    fontFamily: authTheme.fonts.semiBold,
+    fontSize: authTheme.fontSizes.label,
     marginBottom: 8,
+    color: authTheme.colors.textPrimary,
   },
-  inputWrapper: {
+
+  inputBox: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F8F9FA",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
+    backgroundColor: authTheme.colors.inputBg,
+    borderRadius: authTheme.borderRadius,
     paddingHorizontal: 16,
     height: 56,
+    borderWidth: 1,
+    borderColor: authTheme.colors.inputBorder,
+    gap: 10,
   },
-  inputError: {
-    borderColor: "#FF3B30",
-  },
-  inputIcon: {
-    marginRight: 12,
-  },
+
   input: {
     flex: 1,
-    fontSize: 16,
-    fontFamily: "Inter_400Regular",
-    color: "#1A1A1A",
-    height: "100%",
-    ...Platform.select({
-      ios: {
-        backgroundColor: "transparent",
-      },
-      android: {
-        backgroundColor: "transparent",
-      },
-    }),
+    fontFamily: authTheme.fonts.regular,
+    fontSize: authTheme.fontSizes.input,
   },
-  eyeIcon: {
-    padding: 4,
+
+  errorBorder: { borderColor: authTheme.colors.error },
+  error: {
+    color: authTheme.colors.error,
+    marginTop: 6,
+    fontSize: authTheme.fontSizes.error,
   },
-  errorText: {
+
+  hintText: {
     fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: "#FF3B30",
-    marginTop: 4,
-    marginLeft: 4,
+    fontFamily: authTheme.fonts.regular,
+    color: authTheme.colors.textSecondary,
+    marginTop: 6,
   },
-  usernameHint: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: "#999999",
-    marginTop: 4,
-    marginLeft: 4,
-  },
-  passwordHint: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: "#999999",
-    marginTop: 4,
-    marginLeft: 4,
-  },
+
   termsAgreement: {
+    marginBottom: 20,
+    marginTop: 10,
+  },
+  checkbox: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 32,
-    marginTop: 8,
   },
-  switch: {
-    transform: Platform.OS === "ios" ? [{ scale: 0.8 }] : [],
+  checkboxInner: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: authTheme.colors.inputBorder,
+    backgroundColor: authTheme.colors.background,
     marginRight: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  checkboxInnerChecked: {
+    backgroundColor: authTheme.colors.textPrimary,
+    borderColor: authTheme.colors.textPrimary,
   },
   termsText: {
     flex: 1,
     fontSize: 14,
-    fontFamily: "Inter_400Regular",
-    color: "#666666",
+    fontFamily: authTheme.fonts.regular,
+    color: authTheme.colors.textSecondary,
     lineHeight: 20,
   },
   termsLink: {
-    fontFamily: "Inter_500Medium",
-    color: "#1A1A1A",
+    fontFamily: authTheme.fonts.semiBold,
+    color: authTheme.colors.textPrimary,
   },
-  registerButton: {
-    borderRadius: 12,
+
+  button: {
+    borderRadius: authTheme.borderRadius,
     overflow: "hidden",
-    marginBottom: 24,
+    marginTop: 10,
   },
-  registerButtonDisabled: {
-    opacity: 0.7,
+  buttonInner: { paddingVertical: 18, alignItems: "center" },
+  buttonText: {
+    color: authTheme.colors.buttonText,
+    fontFamily: authTheme.fonts.semiBold,
+    fontSize: authTheme.fontSizes.button,
   },
-  gradientButton: {
+
+  footer: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "center",
     paddingVertical: 18,
-    paddingHorizontal: 24,
-    gap: 8,
+    borderTopWidth: 1,
+    borderTopColor: "#F0F0F0",
   },
-  registerButtonText: {
-    fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
-    color: "#FFFFFF",
+
+  footerText: {
+    color: authTheme.colors.textSecondary,
+    fontSize: authTheme.fontSizes.footer,
   },
-  loginContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-  },
-  loginText: {
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
-    color: "#666666",
-  },
-  loginLink: {
-    fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
-    color: "#1A1A1A",
+  footerLink: {
+    fontFamily: authTheme.fonts.semiBold,
+    color: authTheme.colors.textPrimary,
+    fontSize: authTheme.fontSizes.footer,
   },
 });

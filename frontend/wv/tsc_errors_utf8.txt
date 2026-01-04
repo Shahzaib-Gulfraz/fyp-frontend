@@ -1,0 +1,10 @@
+﻿app/(main)/saved-items/index.tsx(65,9): error TS2322: Type '{ title: string; totalCount: number; selectedCount: number; onBack: () => void; isSelecting: boolean; onSelectModeToggle: () => void; onCancelSelection: () => void; onDeleteSelected: () => void; }' is not assignable to type 'IntrinsicAttributes & SavedItemsHeaderProps'.
+  Property 'selectedCount' does not exist on type 'IntrinsicAttributes & SavedItemsHeaderProps'.
+app/(main)/try-on/components/SavedItemsSection.tsx(71,50): error TS2551: Property 'onPrimary' does not exist on type 'AppThemeColors'. Did you mean 'primary'?
+app/(main)/try-on/components/ViewModeToggle.tsx(17,63): error TS2339: Property 'surfaceVariant' does not exist on type 'AppThemeColors'.
+app/(main)/try-on/components/ViewModeToggle.tsx(28,43): error TS2551: Property 'onPrimary' does not exist on type 'AppThemeColors'. Did you mean 'primary'?
+app/(main)/try-on/components/ViewModeToggle.tsx(33,45): error TS2551: Property 'onPrimary' does not exist on type 'AppThemeColors'. Did you mean 'primary'?
+app/(main)/try-on/components/ViewModeToggle.tsx(51,43): error TS2551: Property 'onPrimary' does not exist on type 'AppThemeColors'. Did you mean 'primary'?
+app/(main)/try-on/components/ViewModeToggle.tsx(56,45): error TS2551: Property 'onPrimary' does not exist on type 'AppThemeColors'. Did you mean 'primary'?
+app/(main)/try-on/index.tsx(100,10): error TS2739: Type '{ item: ClothingItem; isSaved: boolean; onToggleSave: () => void; }' is missing the following properties from type 'ClothingInfoProps': selectedSize, selectedColor, onSelectSize, onSelectColor
+app/(main)/try-on/index.tsx(107,10): error TS2741: Property 'onShare' is missing in type '{ onBuyNow: () => void; onPost: () => void; }' but required in type 'ActionButtonsProps'.

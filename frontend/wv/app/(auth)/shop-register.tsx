@@ -1,5 +1,5 @@
 // app/(auth)/shop-register.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -11,6 +11,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Dimensions,
+  Animated,
+  Easing,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -19,7 +22,6 @@ import { Ionicons } from "@expo/vector-icons";
 import {
   useFonts,
   Inter_400Regular,
-  Inter_500Medium,
   Inter_600SemiBold,
   Inter_700Bold,
 } from "@expo-google-fonts/inter";
@@ -27,6 +29,10 @@ import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import Toast from "react-native-toast-message";
 import shopService from "../../src/api/shopService";
+import { Image } from "expo-image";
+import { authTheme } from "@/src/theme/authTheme";
+
+const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 const shopCategories = [
   { id: "clothes", label: "Clothes", icon: "shirt-outline" },
@@ -50,7 +56,7 @@ export default function RegisterShopScreen() {
     // Step 1: Basic Information
     shopName: "",
     shopUsername: "",
-    shopCategory: "clothes", // Default to clothes
+    shopCategory: "clothes",
     businessType: "",
     description: "",
 
@@ -77,15 +83,36 @@ export default function RegisterShopScreen() {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const shineAnim = useRef(new Animated.Value(-120)).current;
+
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
-    Inter_500Medium,
     Inter_600SemiBold,
     Inter_700Bold,
   });
 
+  useEffect(() => {
+    const loop = () => {
+      shineAnim.setValue(-120);
+      Animated.timing(shineAnim, {
+        toValue: 320,
+        duration: 1500,
+        easing: Easing.inOut(Easing.ease),
+        useNativeDriver: true,
+      }).start(() => setTimeout(loop, 2200));
+    };
+    loop();
+  }, [shineAnim]);
+
+  if (!fontsLoaded) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator size="large" color={authTheme.colors.textPrimary} />
+      </View>
+    );
+  }
+
   const validateUsername = (username: string) => {
-    // Username validation rules (same as user registration)
     const usernameRegex = /^[a-zA-Z0-9_.]+$/;
 
     if (!username.trim()) {
@@ -130,7 +157,6 @@ export default function RegisterShopScreen() {
     } else if (password.length < 8) {
       return "Password must be at least 8 characters";
     } else {
-      // Check password strength
       const hasUpperCase = /[A-Z]/.test(password);
       const hasLowerCase = /[a-z]/.test(password);
       const hasNumbers = /\d/.test(password);
@@ -145,7 +171,6 @@ export default function RegisterShopScreen() {
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setShopData((prev) => ({ ...prev, [field]: value }));
-    // Clear error when user starts typing
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: "" }));
     }
@@ -178,7 +203,6 @@ export default function RegisterShopScreen() {
         newErrors.shopName = "Shop name is required";
       }
 
-      // Validate shop username
       const usernameValidationError = validateUsername(shopData.shopUsername);
       if (usernameValidationError) {
         newErrors.shopUsername = usernameValidationError;
@@ -214,13 +238,11 @@ export default function RegisterShopScreen() {
         newErrors.country = "Country is required";
       }
     } else if (stepNumber === 3) {
-      // Password validation
       const passwordValidationError = validatePassword(shopData.password);
       if (passwordValidationError) {
         newErrors.password = passwordValidationError;
       }
 
-      // Confirm password validation
       if (!shopData.confirmPassword.trim()) {
         newErrors.confirmPassword = "Please confirm your password";
       } else if (shopData.password !== shopData.confirmPassword) {
@@ -229,9 +251,9 @@ export default function RegisterShopScreen() {
 
       if (!shopData.agreedToTerms) {
         Toast.show({
-          type: 'error',
-          text1: 'Terms Required',
-          text2: 'You must agree to the Terms of Service and Privacy Policy.',
+          type: "error",
+          text1: "Terms Required",
+          text2: "You must agree to the Terms of Service and Privacy Policy.",
         });
         return false;
       }
@@ -242,51 +264,44 @@ export default function RegisterShopScreen() {
   };
 
   const handleNextStep = () => {
-    console.log('Next step triggered for step:', step);
+    console.log("Next step triggered for step:", step);
     if (validateStep(step)) {
       if (step < 3) {
         setStep(step + 1);
       } else {
-        console.log('Proceeding to handleSubmit');
+        console.log("Proceeding to handleSubmit");
         handleSubmit();
       }
     } else {
-      console.log('Validation failed for step:', step, errors);
+      console.log("Validation failed for step:", step, errors);
       if (step === 3) {
         Toast.show({
-          type: 'error',
-          text1: 'Validation Error',
-          text2: 'Please correct the errors on the form before proceeding.',
+          type: "error",
+          text1: "Validation Error",
+          text2: "Please correct the errors on the form before proceeding.",
         });
       }
     }
   };
 
-  const handlePreviousStep = () => {
-    if (step === 1) {
-      router.push("/login");
-    } else {
-      setStep(step - 1);
-    }
-  };
+
 
   const handleSubmit = async () => {
-    console.log('handleSubmit starting...');
+    console.log("handleSubmit starting...");
     setIsLoading(true);
 
     try {
-      console.log('Current shopData state:', {
+      console.log("Current shopData state:", {
         email: shopData.email,
         shopName: shopData.shopName,
         hasLogo: !!shopData.logo,
-        hasBanner: !!shopData.banner
+        hasBanner: !!shopData.banner,
       });
 
-      // Prepare shop data
       const shopDataToSend = {
         shopName: shopData.shopName,
         shopUsername: shopData.shopUsername,
-        category: shopData.shopCategory, // Fixed field name to match backend
+        category: shopData.shopCategory,
         businessType: shopData.businessType,
         description: shopData.description,
         email: shopData.email,
@@ -299,53 +314,49 @@ export default function RegisterShopScreen() {
         zipCode: shopData.zipCode || undefined,
       };
 
-      // Prepare images
       const images = {
         logo: shopData.logo,
         banner: shopData.banner,
       };
 
-      console.log('Registering shop:', shopDataToSend.email);
+      console.log("Registering shop:", shopDataToSend.email);
 
-      // Call the new register API
       const response = await shopService.registerShop(shopDataToSend, images);
 
-      console.log('Shop registered successfully:', response);
+      console.log("Shop registered successfully:", response);
 
       Toast.show({
-        type: 'success',
-        text1: response.message || 'Registration Successful!',
-        text2: 'Redirecting to your dashboard...',
+        type: "success",
+        text1: response.message || "Registration Successful!",
+        text2: "Redirecting to your dashboard...",
         visibilityTime: 2000,
       });
 
-      // Redirect to dashboard after a short delay to let user see toast if needed, 
-      // or just redirect immediately as the user asked for both. 
-      // User said "after register successful usy /shop/dashboard pr route krva do"
       setTimeout(() => {
         router.replace("/(main)/shop/dashboard");
       }, 1000);
     } catch (error: any) {
-      console.error('Registration error:', error);
+      console.error("Registration error:", error);
 
-      // Handle different error types with Toast
       if (error.status === 400) {
         Toast.show({
-          type: 'error',
-          text1: 'Registration Failed',
-          text2: error.message || 'Email/Username already exists or validation error',
+          type: "error",
+          text1: "Registration Failed",
+          text2:
+            error.message ||
+            "Email/Username already exists or validation error",
         });
       } else if (error.status === 0) {
         Toast.show({
-          type: 'error',
-          text1: 'Network Error',
-          text2: 'Please check your internet connection',
+          type: "error",
+          text1: "Network Error",
+          text2: "Please check your internet connection",
         });
       } else {
         Toast.show({
-          type: 'error',
-          text1: 'Registration Failed',
-          text2: error.message || 'An error occurred during registration.',
+          type: "error",
+          text1: "Registration Failed",
+          text2: error.message || "An error occurred during registration.",
         });
       }
     } finally {
@@ -391,21 +402,31 @@ export default function RegisterShopScreen() {
   );
 
   const renderStepContent = () => {
-    if (!fontsLoaded) {
-      return (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#000000" />
-        </View>
-      );
-    }
-
     switch (step) {
       case 1:
         return (
           <View style={styles.stepContent}>
             {/* Title */}
             <View style={styles.titleSection}>
-              <Text style={styles.title}>Shop Information</Text>
+              <View style={styles.shineWrapper}>
+                <Text style={styles.title}>Shop Information</Text>
+                <Animated.View
+                  pointerEvents="none"
+                  style={[
+                    styles.shineOverlay,
+                    { transform: [{ translateX: shineAnim }] },
+                  ]}
+                >
+                  <LinearGradient
+                    colors={[
+                      "transparent",
+                      "rgba(255,255,255,0.85)",
+                      "transparent",
+                    ]}
+                    style={styles.shineGradient}
+                  />
+                </Animated.View>
+              </View>
               <Text style={styles.subtitle}>
                 Tell us about your shop to get started
               </Text>
@@ -418,10 +439,18 @@ export default function RegisterShopScreen() {
                 onPress={() => handleImagePicker("logo")}
               >
                 {shopData.logo ? (
-                  <Ionicons name="checkmark-circle" size={32} color="#00BCD4" />
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={32}
+                    color={authTheme.colors.primary}
+                  />
                 ) : (
                   <>
-                    <Ionicons name="camera-outline" size={24} color="#666666" />
+                    <Ionicons
+                      name="camera-outline"
+                      size={24}
+                      color={authTheme.colors.textSecondary}
+                    />
                     <Text style={styles.imageUploadText}>Shop Logo</Text>
                     <Text style={styles.imageUploadSubtext}>
                       Square, min 300x300px
@@ -435,10 +464,18 @@ export default function RegisterShopScreen() {
                 onPress={() => handleImagePicker("banner")}
               >
                 {shopData.banner ? (
-                  <Ionicons name="checkmark-circle" size={32} color="#00BCD4" />
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={32}
+                    color={authTheme.colors.primary}
+                  />
                 ) : (
                   <>
-                    <Ionicons name="image-outline" size={24} color="#666666" />
+                    <Ionicons
+                      name="image-outline"
+                      size={24}
+                      color={authTheme.colors.textSecondary}
+                    />
                     <Text style={styles.imageUploadText}>Shop Banner</Text>
                     <Text style={styles.imageUploadSubtext}>
                       Wide, min 1200x400px
@@ -447,97 +484,90 @@ export default function RegisterShopScreen() {
                 )}
               </TouchableOpacity>
             </View>
-            {errors.logo && <Text style={styles.errorText}>{errors.logo}</Text>}
+            {errors.logo && <Text style={styles.error}>{errors.logo}</Text>}
 
             {/* Shop Name */}
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Shop Name *</Text>
+            <View style={styles.field}>
+              <Text style={styles.label}>Shop Name *</Text>
               <View
-                style={[
-                  styles.inputWrapper,
-                  errors.shopName ? styles.inputError : null,
-                ]}
+                style={[styles.inputBox, errors.shopName && styles.errorBorder]}
               >
                 <Ionicons
                   name="storefront-outline"
                   size={20}
-                  color="#666666"
-                  style={styles.inputIcon}
+                  color={authTheme.colors.textSecondary}
                 />
                 <TextInput
                   style={styles.input}
                   value={shopData.shopName}
                   onChangeText={(text) => handleInputChange("shopName", text)}
                   placeholder="Enter your shop name"
-                  placeholderTextColor="#999999"
+                  placeholderTextColor={authTheme.colors.textSecondary}
                   editable={!isLoading}
-                  cursorColor="#1A1A1A"
+                  cursorColor={authTheme.colors.textPrimary}
                 />
               </View>
               {errors.shopName && (
-                <Text style={styles.errorText}>{errors.shopName}</Text>
+                <Text style={styles.error}>{errors.shopName}</Text>
               )}
             </View>
 
             {/* Shop Username */}
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Shop Username *</Text>
+            <View style={styles.field}>
+              <Text style={styles.label}>Shop Username *</Text>
               <View
                 style={[
-                  styles.inputWrapper,
-                  errors.shopUsername ? styles.inputError : null,
+                  styles.inputBox,
+                  errors.shopUsername && styles.errorBorder,
                 ]}
               >
                 <Ionicons
                   name="at-outline"
                   size={20}
-                  color="#666666"
-                  style={styles.inputIcon}
+                  color={authTheme.colors.textSecondary}
                 />
                 <TextInput
                   style={styles.input}
                   value={shopData.shopUsername}
                   onChangeText={(text) => {
-                    // Convert to lowercase and remove spaces
                     const formattedText = text
                       .toLowerCase()
                       .replace(/\s+/g, "");
                     handleInputChange("shopUsername", formattedText);
                   }}
                   placeholder="Choose a unique username"
-                  placeholderTextColor="#999999"
+                  placeholderTextColor={authTheme.colors.textSecondary}
                   autoCapitalize="none"
                   autoCorrect={false}
                   editable={!isLoading}
-                  cursorColor="#1A1A1A"
+                  cursorColor={authTheme.colors.textPrimary}
                 />
               </View>
               {errors.shopUsername && (
-                <Text style={styles.errorText}>{errors.shopUsername}</Text>
+                <Text style={styles.error}>{errors.shopUsername}</Text>
               )}
-              <Text style={styles.usernameHint}>
+              <Text style={styles.hintText}>
                 Only letters, numbers, _ and . are allowed
               </Text>
             </View>
 
             {/* Category - Fixed to Clothes */}
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Category</Text>
+            <View style={styles.field}>
+              <Text style={styles.label}>Category</Text>
               <View style={styles.categoryGrid}>
                 {shopCategories.map((category) => (
                   <TouchableOpacity
                     key={category.id}
                     style={[
                       styles.categoryButton,
-                      styles.categoryButtonSelected, // Always selected since only one category
+                      styles.categoryButtonSelected,
                     ]}
-                    disabled // Disable since only one option
+                    disabled
                   >
                     <Ionicons
                       name={category.icon as any}
                       size={20}
                       color="#FFFFFF"
-                      style={styles.categoryIcon}
                     />
                     <Text style={styles.categoryTextSelected}>
                       {category.label}
@@ -545,14 +575,14 @@ export default function RegisterShopScreen() {
                   </TouchableOpacity>
                 ))}
               </View>
-              <Text style={styles.categoryInfo}>
+              <Text style={styles.hintText}>
                 All shops are registered under the Clothes category
               </Text>
             </View>
 
             {/* Business Type */}
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Business Type *</Text>
+            <View style={styles.field}>
+              <Text style={styles.label}>Business Type *</Text>
               <View style={styles.businessTypeGrid}>
                 {businessTypes.map((type) => (
                   <TouchableOpacity
@@ -577,24 +607,24 @@ export default function RegisterShopScreen() {
                 ))}
               </View>
               {errors.businessType && (
-                <Text style={styles.errorText}>{errors.businessType}</Text>
+                <Text style={styles.error}>{errors.businessType}</Text>
               )}
             </View>
 
             {/* Description */}
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Shop Description</Text>
+            <View style={styles.field}>
+              <Text style={styles.label}>Shop Description</Text>
               <TextInput
                 style={styles.textArea}
                 value={shopData.description}
                 onChangeText={(text) => handleInputChange("description", text)}
                 placeholder="Describe your shop and products..."
-                placeholderTextColor="#999999"
+                placeholderTextColor={authTheme.colors.textSecondary}
                 multiline
                 numberOfLines={4}
                 textAlignVertical="top"
                 editable={!isLoading}
-                cursorColor="#1A1A1A"
+                cursorColor={authTheme.colors.textPrimary}
               />
               <Text style={styles.charCount}>
                 {shopData.description.length}/500
@@ -608,184 +638,177 @@ export default function RegisterShopScreen() {
           <View style={styles.stepContent}>
             {/* Title */}
             <View style={styles.titleSection}>
-              <Text style={styles.title}>Contact Details</Text>
+              <View style={styles.shineWrapper}>
+                <Text style={styles.title}>Contact Details</Text>
+                <Animated.View
+                  pointerEvents="none"
+                  style={[
+                    styles.shineOverlay,
+                    { transform: [{ translateX: shineAnim }] },
+                  ]}
+                >
+                  <LinearGradient
+                    colors={[
+                      "transparent",
+                      "rgba(255,255,255,0.85)",
+                      "transparent",
+                    ]}
+                    style={styles.shineGradient}
+                  />
+                </Animated.View>
+              </View>
               <Text style={styles.subtitle}>Where customers can reach you</Text>
             </View>
 
             {/* Contact Information */}
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Contact Email *</Text>
+            <View style={styles.field}>
+              <Text style={styles.label}>Contact Email *</Text>
               <View
-                style={[
-                  styles.inputWrapper,
-                  errors.email ? styles.inputError : null,
-                ]}
+                style={[styles.inputBox, errors.email && styles.errorBorder]}
               >
                 <Ionicons
                   name="mail-outline"
                   size={20}
-                  color="#666666"
-                  style={styles.inputIcon}
+                  color={authTheme.colors.textSecondary}
                 />
                 <TextInput
                   style={styles.input}
                   value={shopData.email}
                   onChangeText={(text) => handleInputChange("email", text)}
                   placeholder="business@email.com"
-                  placeholderTextColor="#999999"
+                  placeholderTextColor={authTheme.colors.textSecondary}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   editable={!isLoading}
-                  cursorColor="#1A1A1A"
+                  cursorColor={authTheme.colors.textPrimary}
                 />
               </View>
-              {errors.email && (
-                <Text style={styles.errorText}>{errors.email}</Text>
-              )}
+              {errors.email && <Text style={styles.error}>{errors.email}</Text>}
             </View>
 
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Phone Number *</Text>
+            <View style={styles.field}>
+              <Text style={styles.label}>Phone Number *</Text>
               <View
-                style={[
-                  styles.inputWrapper,
-                  errors.phone ? styles.inputError : null,
-                ]}
+                style={[styles.inputBox, errors.phone && styles.errorBorder]}
               >
                 <Ionicons
                   name="call-outline"
                   size={20}
-                  color="#666666"
-                  style={styles.inputIcon}
+                  color={authTheme.colors.textSecondary}
                 />
                 <TextInput
                   style={styles.input}
                   value={shopData.phone}
                   onChangeText={(text) => handleInputChange("phone", text)}
                   placeholder="+92 300 1234567"
-                  placeholderTextColor="#999999"
+                  placeholderTextColor={authTheme.colors.textSecondary}
                   keyboardType="phone-pad"
                   editable={!isLoading}
-                  cursorColor="#1A1A1A"
+                  cursorColor={authTheme.colors.textPrimary}
                 />
               </View>
-              {errors.phone && (
-                <Text style={styles.errorText}>{errors.phone}</Text>
-              )}
+              {errors.phone && <Text style={styles.error}>{errors.phone}</Text>}
             </View>
 
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Website (Optional)</Text>
-              <View style={styles.inputWrapper}>
+            <View style={styles.field}>
+              <Text style={styles.label}>Website (Optional)</Text>
+              <View style={styles.inputBox}>
                 <Ionicons
                   name="globe-outline"
                   size={20}
-                  color="#666666"
-                  style={styles.inputIcon}
+                  color={authTheme.colors.textSecondary}
                 />
                 <TextInput
                   style={styles.input}
                   value={shopData.website}
                   onChangeText={(text) => handleInputChange("website", text)}
                   placeholder="https://yourwebsite.com"
-                  placeholderTextColor="#999999"
+                  placeholderTextColor={authTheme.colors.textSecondary}
                   autoCapitalize="none"
                   editable={!isLoading}
-                  cursorColor="#1A1A1A"
+                  cursorColor={authTheme.colors.textPrimary}
                 />
               </View>
             </View>
 
             {/* Address */}
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Business Address *</Text>
+            <View style={styles.field}>
+              <Text style={styles.label}>Business Address *</Text>
               <View
-                style={[
-                  styles.inputWrapper,
-                  errors.address ? styles.inputError : null,
-                ]}
+                style={[styles.inputBox, errors.address && styles.errorBorder]}
               >
                 <Ionicons
                   name="location-outline"
                   size={20}
-                  color="#666666"
-                  style={styles.inputIcon}
+                  color={authTheme.colors.textSecondary}
                 />
                 <TextInput
                   style={styles.input}
                   value={shopData.address}
                   onChangeText={(text) => handleInputChange("address", text)}
                   placeholder="Street address"
-                  placeholderTextColor="#999999"
+                  placeholderTextColor={authTheme.colors.textSecondary}
                   editable={!isLoading}
-                  cursorColor="#1A1A1A"
+                  cursorColor={authTheme.colors.textPrimary}
                 />
               </View>
               {errors.address && (
-                <Text style={styles.errorText}>{errors.address}</Text>
+                <Text style={styles.error}>{errors.address}</Text>
               )}
             </View>
 
             <View style={styles.rowInputs}>
-              <View style={[styles.formGroup, { flex: 1, marginRight: 12 }]}>
-                <Text style={styles.formLabel}>City *</Text>
+              <View style={[styles.field, { flex: 1, marginRight: 12 }]}>
+                <Text style={styles.label}>City *</Text>
                 <View
-                  style={[
-                    styles.inputWrapper,
-                    errors.city ? styles.inputError : null,
-                  ]}
+                  style={[styles.inputBox, errors.city && styles.errorBorder]}
                 >
                   <TextInput
                     style={styles.input}
                     value={shopData.city}
                     onChangeText={(text) => handleInputChange("city", text)}
                     placeholder="City"
-                    placeholderTextColor="#999999"
+                    placeholderTextColor={authTheme.colors.textSecondary}
                     editable={!isLoading}
-                    cursorColor="#1A1A1A"
+                    cursorColor={authTheme.colors.textPrimary}
                   />
                 </View>
-                {errors.city && (
-                  <Text style={styles.errorText}>{errors.city}</Text>
-                )}
+                {errors.city && <Text style={styles.error}>{errors.city}</Text>}
               </View>
 
-              <View style={[styles.formGroup, { flex: 1 }]}>
-                <Text style={styles.formLabel}>ZIP Code</Text>
-                <View style={styles.inputWrapper}>
+              <View style={[styles.field, { flex: 1 }]}>
+                <Text style={styles.label}>ZIP Code</Text>
+                <View style={styles.inputBox}>
                   <TextInput
                     style={styles.input}
                     value={shopData.zipCode}
                     onChangeText={(text) => handleInputChange("zipCode", text)}
                     placeholder="ZIP Code"
-                    placeholderTextColor="#999999"
+                    placeholderTextColor={authTheme.colors.textSecondary}
                     editable={!isLoading}
-                    cursorColor="#1A1A1A"
+                    cursorColor={authTheme.colors.textPrimary}
                   />
                 </View>
               </View>
             </View>
 
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Country *</Text>
+            <View style={styles.field}>
+              <Text style={styles.label}>Country *</Text>
               <View
-                style={[
-                  styles.inputWrapper,
-                  errors.country ? styles.inputError : null,
-                ]}
+                style={[styles.inputBox, errors.country && styles.errorBorder]}
               >
                 <TextInput
                   style={styles.input}
                   value={shopData.country}
                   onChangeText={(text) => handleInputChange("country", text)}
                   placeholder="Country"
-                  placeholderTextColor="#999999"
+                  placeholderTextColor={authTheme.colors.textSecondary}
                   editable={!isLoading}
-                  cursorColor="#1A1A1A"
+                  cursorColor={authTheme.colors.textPrimary}
                 />
               </View>
               {errors.country && (
-                <Text style={styles.errorText}>{errors.country}</Text>
+                <Text style={styles.error}>{errors.country}</Text>
               )}
             </View>
           </View>
@@ -796,71 +819,83 @@ export default function RegisterShopScreen() {
           <View style={styles.stepContent}>
             {/* Title */}
             <View style={styles.titleSection}>
-              <Text style={styles.title}>Account Security</Text>
+              <View style={styles.shineWrapper}>
+                <Text style={styles.title}>Account Security</Text>
+                <Animated.View
+                  pointerEvents="none"
+                  style={[
+                    styles.shineOverlay,
+                    { transform: [{ translateX: shineAnim }] },
+                  ]}
+                >
+                  <LinearGradient
+                    colors={[
+                      "transparent",
+                      "rgba(255,255,255,0.85)",
+                      "transparent",
+                    ]}
+                    style={styles.shineGradient}
+                  />
+                </Animated.View>
+              </View>
               <Text style={styles.subtitle}>
                 Create a secure password for your shop account
               </Text>
             </View>
 
             {/* Password Input */}
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Password *</Text>
+            <View style={styles.field}>
+              <Text style={styles.label}>Password *</Text>
               <View
-                style={[
-                  styles.inputWrapper,
-                  errors.password ? styles.inputError : null,
-                ]}
+                style={[styles.inputBox, errors.password && styles.errorBorder]}
               >
                 <Ionicons
                   name="lock-closed-outline"
                   size={20}
-                  color="#666666"
-                  style={styles.inputIcon}
+                  color={authTheme.colors.textSecondary}
                 />
                 <TextInput
                   style={styles.input}
                   value={shopData.password}
                   onChangeText={(text) => handleInputChange("password", text)}
                   placeholder="Create a strong password"
-                  placeholderTextColor="#999999"
+                  placeholderTextColor={authTheme.colors.textSecondary}
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
                   editable={!isLoading}
-                  cursorColor="#1A1A1A"
+                  cursorColor={authTheme.colors.textPrimary}
                 />
                 <TouchableOpacity
                   onPress={() => setShowPassword(!showPassword)}
-                  style={styles.eyeIcon}
                 >
                   <Ionicons
                     name={showPassword ? "eye-off-outline" : "eye-outline"}
                     size={20}
-                    color="#666666"
+                    color={authTheme.colors.textSecondary}
                   />
                 </TouchableOpacity>
               </View>
               {errors.password && (
-                <Text style={styles.errorText}>{errors.password}</Text>
+                <Text style={styles.error}>{errors.password}</Text>
               )}
-              <Text style={styles.passwordHint}>
+              <Text style={styles.hintText}>
                 Must include uppercase, lowercase, number, and special character
               </Text>
             </View>
 
             {/* Confirm Password Input */}
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Confirm Password *</Text>
+            <View style={styles.field}>
+              <Text style={styles.label}>Confirm Password *</Text>
               <View
                 style={[
-                  styles.inputWrapper,
-                  errors.confirmPassword ? styles.inputError : null,
+                  styles.inputBox,
+                  errors.confirmPassword && styles.errorBorder,
                 ]}
               >
                 <Ionicons
                   name="lock-closed-outline"
                   size={20}
-                  color="#666666"
-                  style={styles.inputIcon}
+                  color={authTheme.colors.textSecondary}
                 />
                 <TextInput
                   style={styles.input}
@@ -869,27 +904,26 @@ export default function RegisterShopScreen() {
                     handleInputChange("confirmPassword", text)
                   }
                   placeholder="Re-enter your password"
-                  placeholderTextColor="#999999"
+                  placeholderTextColor={authTheme.colors.textSecondary}
                   secureTextEntry={!showConfirmPassword}
                   autoCapitalize="none"
                   editable={!isLoading}
-                  cursorColor="#1A1A1A"
+                  cursorColor={authTheme.colors.textPrimary}
                 />
                 <TouchableOpacity
                   onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                  style={styles.eyeIcon}
                 >
                   <Ionicons
                     name={
                       showConfirmPassword ? "eye-off-outline" : "eye-outline"
                     }
                     size={20}
-                    color="#666666"
+                    color={authTheme.colors.textSecondary}
                   />
                 </TouchableOpacity>
               </View>
               {errors.confirmPassword && (
-                <Text style={styles.errorText}>{errors.confirmPassword}</Text>
+                <Text style={styles.error}>{errors.confirmPassword}</Text>
               )}
             </View>
 
@@ -926,14 +960,6 @@ export default function RegisterShopScreen() {
     }
   };
 
-  if (!fontsLoaded) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#000000" />
-      </View>
-    );
-  }
-
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
@@ -950,14 +976,18 @@ export default function RegisterShopScreen() {
         >
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={handlePreviousStep}
-            >
-              <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+            <TouchableOpacity onPress={() => router.push("/(auth)/login")}>
+              <Ionicons
+                name="arrow-back"
+                size={24}
+                color={authTheme.colors.textPrimary}
+              />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Shop Registration</Text>
-            <View style={{ width: 40 }} />
+            <Image
+              source={require("../../assets/images/logo-light.png")}
+              style={styles.logo}
+              contentFit="contain"
+            />
           </View>
 
           {/* Step Indicator */}
@@ -969,21 +999,19 @@ export default function RegisterShopScreen() {
           {/* Action Buttons */}
           <View style={styles.actionButtons}>
             <TouchableOpacity
-              style={[
-                styles.primaryButton,
-                isLoading && styles.primaryButtonDisabled,
-              ]}
+              style={[styles.button, isLoading && styles.buttonDisabled]}
               onPress={handleNextStep}
               disabled={isLoading}
             >
               <LinearGradient
-                colors={["#000000", "#333333"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.gradientButton}
+                colors={["#000", "#333"]}
+                style={styles.buttonInner}
               >
                 {isLoading ? (
-                  <ActivityIndicator color="#FFFFFF" size="small" />
+                  <ActivityIndicator
+                    color={authTheme.colors.buttonText}
+                    size="small"
+                  />
                 ) : (
                   <>
                     <Ionicons
@@ -993,9 +1021,9 @@ export default function RegisterShopScreen() {
                           : "arrow-forward-outline"
                       }
                       size={20}
-                      color="#FFFFFF"
+                      color={authTheme.colors.buttonText}
                     />
-                    <Text style={styles.primaryButtonText}>
+                    <Text style={styles.buttonText}>
                       {step === 3 ? "Complete Registration" : "Continue"}
                     </Text>
                   </>
@@ -1005,6 +1033,7 @@ export default function RegisterShopScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      <Toast />
     </SafeAreaView>
   );
 }
@@ -1012,13 +1041,13 @@ export default function RegisterShopScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: authTheme.colors.background,
   },
-  loadingContainer: {
+  loading: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: authTheme.colors.background,
   },
   keyboardView: {
     flex: 1,
@@ -1029,30 +1058,18 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingBottom: 40,
+    minHeight: SCREEN_HEIGHT * 0.9,
   },
   header: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 20,
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#F8F9FA",
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontFamily: "Inter_600SemiBold",
-    color: "#1A1A1A",
-  },
+
+  logo: { width: 40, height: 40 },
   stepIndicator: {
     flexDirection: "row",
     justifyContent: "center",
@@ -1069,34 +1086,35 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "#F0F0F0",
+    backgroundColor: authTheme.colors.inputBg,
     justifyContent: "center",
     alignItems: "center",
   },
   stepCircleActive: {
-    backgroundColor: "#000000",
+    backgroundColor: authTheme.colors.textPrimary,
   },
   stepNumber: {
     fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
-    color: "#999999",
+    fontFamily: authTheme.fonts.semiBold,
+    color: authTheme.colors.textSecondary,
   },
   stepNumberActive: {
-    color: "#FFFFFF",
+    color: authTheme.colors.background,
   },
   stepLabel: {
     fontSize: 12,
-    fontFamily: "Inter_500Medium",
-    color: "#999999",
+    fontFamily: authTheme.fonts.regular,
+    color: authTheme.colors.textSecondary,
     marginLeft: 8,
   },
   stepLabelActive: {
-    color: "#1A1A1A",
+    color: authTheme.colors.textPrimary,
+    fontFamily: authTheme.fonts.semiBold,
   },
   stepLine: {
     flex: 1,
     height: 2,
-    backgroundColor: "#F0F0F0",
+    backgroundColor: authTheme.colors.inputBorder,
     marginHorizontal: 8,
   },
   stepContent: {
@@ -1104,30 +1122,47 @@ const styles = StyleSheet.create({
   },
   titleSection: {
     marginBottom: 20,
+    alignItems: "center",
+  },
+  shineWrapper: {
+    position: "relative",
+    overflow: "hidden",
+  },
+  shineOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: 90,
+    height: "100%",
+  },
+  shineGradient: {
+    flex: 1,
+    transform: [{ skewX: "-20deg" }],
   },
   title: {
-    fontSize: 24,
-    fontFamily: "Inter_700Bold",
-    color: "#1A1A1A",
-    marginBottom: 8,
+    fontSize: authTheme.fontSizes.appName,
+    fontFamily: authTheme.fonts.bold,
+    color: authTheme.colors.textPrimary,
+    textAlign: "center",
   },
   subtitle: {
-    fontSize: 16,
-    fontFamily: "Inter_400Regular",
-    color: "#666666",
-    lineHeight: 22,
+    fontSize: authTheme.fontSizes.subtitle,
+    fontFamily: authTheme.fonts.regular,
+    color: authTheme.colors.textSecondary,
+    textAlign: "center",
+    marginTop: 6,
   },
   imageSection: {
     flexDirection: "row",
     gap: 16,
-    marginBottom: 24,
+    marginBottom: 20,
   },
   imageUpload: {
     flex: 1,
     height: 120,
-    backgroundColor: "#F8F9FA",
+    backgroundColor: authTheme.colors.inputBg,
     borderWidth: 2,
-    borderColor: "#E0E0E0",
+    borderColor: authTheme.colors.inputBorder,
     borderRadius: 12,
     borderStyle: "dashed",
     justifyContent: "center",
@@ -1138,50 +1173,57 @@ const styles = StyleSheet.create({
   },
   imageUploadText: {
     fontSize: 14,
-    fontFamily: "Inter_500Medium",
-    color: "#666666",
+    fontFamily: authTheme.fonts.semiBold,
+    color: authTheme.colors.textSecondary,
     marginTop: 8,
   },
   imageUploadSubtext: {
     fontSize: 11,
-    fontFamily: "Inter_400Regular",
-    color: "#999999",
+    fontFamily: authTheme.fonts.regular,
+    color: authTheme.colors.textSecondary,
     marginTop: 2,
   },
-  formGroup: {
+  field: {
     marginBottom: 20,
   },
-  formLabel: {
-    fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
-    color: "#1A1A1A",
+  label: {
+    fontSize: authTheme.fontSizes.label,
+    fontFamily: authTheme.fonts.semiBold,
+    color: authTheme.colors.textPrimary,
     marginBottom: 8,
   },
-  inputWrapper: {
+  inputBox: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F8F9FA",
-    borderRadius: 12,
+    backgroundColor: authTheme.colors.inputBg,
+    borderRadius: authTheme.borderRadius,
     borderWidth: 1,
-    borderColor: "#E0E0E0",
+    borderColor: authTheme.colors.inputBorder,
     paddingHorizontal: 16,
     height: 56,
+    gap: 10,
   },
-  inputError: {
-    borderColor: "#FF3B30",
-  },
-  inputIcon: {
-    marginRight: 12,
+  errorBorder: {
+    borderColor: authTheme.colors.error,
   },
   input: {
     flex: 1,
-    fontSize: 16,
-    fontFamily: "Inter_400Regular",
-    color: "#1A1A1A",
+    fontSize: authTheme.fontSizes.input,
+    fontFamily: authTheme.fonts.regular,
+    color: authTheme.colors.textPrimary,
     height: "100%",
   },
-  eyeIcon: {
-    padding: 4,
+  error: {
+    color: authTheme.colors.error,
+    marginTop: 6,
+    fontSize: authTheme.fontSizes.error,
+    fontFamily: authTheme.fonts.regular,
+  },
+  hintText: {
+    fontSize: 12,
+    fontFamily: authTheme.fonts.regular,
+    color: authTheme.colors.textSecondary,
+    marginTop: 4,
   },
   categoryGrid: {
     flexDirection: "row",
@@ -1191,104 +1233,70 @@ const styles = StyleSheet.create({
   categoryButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F8F9FA",
+    backgroundColor: authTheme.colors.inputBg,
     borderWidth: 1,
-    borderColor: "#E0E0E0",
+    borderColor: authTheme.colors.inputBorder,
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,
     gap: 8,
   },
   categoryButtonSelected: {
-    borderColor: "#000000",
-    backgroundColor: "#000000",
-  },
-  categoryIcon: {
-    marginRight: 0,
-  },
-  categoryText: {
-    fontSize: 14,
-    fontFamily: "Inter_500Medium",
-    color: "#666666",
+    borderColor: authTheme.colors.textPrimary,
+    backgroundColor: authTheme.colors.textPrimary,
   },
   categoryTextSelected: {
-    color: "#FFFFFF",
-  },
-  categoryInfo: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: "#666666",
-    marginTop: 8,
-    marginLeft: 4,
-    fontStyle: "italic",
+    color: authTheme.colors.background,
+    fontFamily: authTheme.fonts.semiBold,
+    fontSize: 14,
   },
   businessTypeGrid: {
     gap: 8,
   },
   businessTypeButton: {
-    backgroundColor: "#F8F9FA",
+    backgroundColor: authTheme.colors.inputBg,
     borderWidth: 1,
-    borderColor: "#E0E0E0",
+    borderColor: authTheme.colors.inputBorder,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
   businessTypeButtonSelected: {
-    borderColor: "#000000",
-    backgroundColor: "#000000",
+    borderColor: authTheme.colors.textPrimary,
+    backgroundColor: authTheme.colors.textPrimary,
   },
   businessTypeText: {
     fontSize: 14,
-    fontFamily: "Inter_500Medium",
-    color: "#666666",
+    fontFamily: authTheme.fonts.regular,
+    color: authTheme.colors.textSecondary,
     textAlign: "center",
   },
   businessTypeTextSelected: {
-    color: "#FFFFFF",
+    color: authTheme.colors.background,
+    fontFamily: authTheme.fonts.semiBold,
   },
   textArea: {
-    backgroundColor: "#F8F9FA",
+    backgroundColor: authTheme.colors.inputBg,
     borderWidth: 1,
-    borderColor: "#E0E0E0",
+    borderColor: authTheme.colors.inputBorder,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    fontSize: 16,
-    fontFamily: "Inter_400Regular",
-    color: "#1A1A1A",
+    fontSize: authTheme.fontSizes.input,
+    fontFamily: authTheme.fonts.regular,
+    color: authTheme.colors.textPrimary,
     minHeight: 100,
     textAlignVertical: "top",
   },
   charCount: {
     fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: "#999999",
+    fontFamily: authTheme.fonts.regular,
+    color: authTheme.colors.textSecondary,
     marginTop: 8,
     textAlign: "right",
   },
   rowInputs: {
     flexDirection: "row",
-  },
-  errorText: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: "#FF3B30",
-    marginTop: 4,
-    marginLeft: 4,
-  },
-  usernameHint: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: "#999999",
-    marginTop: 4,
-    marginLeft: 4,
-  },
-  passwordHint: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: "#999999",
-    marginTop: 4,
-    marginLeft: 4,
   },
   termsAgreement: {
     marginBottom: 32,
@@ -1303,66 +1311,48 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: "#E0E0E0",
-    backgroundColor: "#FFFFFF",
+    borderColor: authTheme.colors.inputBorder,
+    backgroundColor: authTheme.colors.background,
     marginRight: 12,
     justifyContent: "center",
     alignItems: "center",
   },
   checkboxInnerChecked: {
-    backgroundColor: "#000000",
-    borderColor: "#000000",
+    backgroundColor: authTheme.colors.textPrimary,
+    borderColor: authTheme.colors.textPrimary,
   },
   termsText: {
     flex: 1,
     fontSize: 14,
-    fontFamily: "Inter_400Regular",
-    color: "#666666",
+    fontFamily: authTheme.fonts.regular,
+    color: authTheme.colors.textSecondary,
     lineHeight: 20,
   },
   termsLink: {
-    fontFamily: "Inter_500Medium",
-    color: "#1A1A1A",
+    fontFamily: authTheme.fonts.semiBold,
+    color: authTheme.colors.textPrimary,
   },
   actionButtons: {
-    flexDirection: "row",
     paddingHorizontal: 24,
     marginTop: 24,
-    gap: 12,
   },
-  primaryButton: {
-    flex: 1,
-    borderRadius: 12,
+  button: {
+    borderRadius: authTheme.borderRadius,
     overflow: "hidden",
   },
-  primaryButtonDisabled: {
+  buttonDisabled: {
     opacity: 0.7,
   },
-  gradientButton: {
+  buttonInner: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 18,
-    paddingHorizontal: 24,
     gap: 8,
   },
-  primaryButtonText: {
-    fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
-    color: "#FFFFFF",
-  },
-  secondaryButton: {
-    flex: 1,
-    backgroundColor: "#F8F9FA",
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    borderRadius: 12,
-    paddingVertical: 18,
-    alignItems: "center",
-  },
-  secondaryButtonText: {
-    fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
-    color: "#1A1A1A",
+  buttonText: {
+    color: authTheme.colors.buttonText,
+    fontFamily: authTheme.fonts.semiBold,
+    fontSize: authTheme.fontSizes.button,
   },
 });

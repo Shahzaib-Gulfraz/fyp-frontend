@@ -1,101 +1,48 @@
-import { Stack, useRouter, useSegments } from "expo-router";
-import { StatusBar } from "expo-status-bar";
-import { ThemeProvider, useTheme } from "../src/context/ThemeContext";
-import { UserProvider } from "../src/context/UserContext";
-import { AuthProvider, useAuth } from "../src/context/AuthContext";
 import React from "react";
-import { View, ActivityIndicator, Text, StyleSheet } from "react-native";
+import { Stack } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { PaperProvider } from "react-native-paper";
+import { ThemeProvider as NavigationThemeProvider } from "@react-navigation/native";
 
-function RootLayoutNav() {
-  const { isDark } = useTheme();
-  const router = useRouter();
-  const segments = useSegments();
-  const { isAuthenticated, userType, isLoading, checkAuth } = useAuth();
-
-  // Re-check auth when navigating to main group
-  React.useEffect(() => {
-    const inMainGroup = segments[0] === "(main)";
-
-    if (inMainGroup) {
-      console.log('🔄 Navigating to main group, re-checking auth...');
-      checkAuth();
-    }
-  }, [segments]);
-
-  React.useEffect(() => {
-    if (isLoading) return;
-
-    const inAuthGroup = segments[0] === "(auth)";
-
-    console.log('🔍 Auth check - isAuthenticated:', isAuthenticated, 'userType:', userType, 'inAuthGroup:', inAuthGroup, 'segments:', segments);
-
-    if (!isAuthenticated && !inAuthGroup) {
-      // Redirect to login if not authenticated
-      console.log('🔄 Redirecting to login (not authenticated)');
-      router.replace("/(auth)/login");
-    } else if (isAuthenticated && inAuthGroup) {
-      // Redirect based on user type if authenticated and in auth screens
-      console.log('🔄 Redirecting authenticated user in auth group to correct home...');
-      if (userType === 'shop') {
-        router.replace("/(main)/shop/dashboard");
-      } else {
-        router.replace("/(main)/home");
-      }
-    }
-  }, [isAuthenticated, segments, isLoading, userType]);
-
-
-
-  if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#000" />
-        <Text style={styles.loadingText}>Loading...</Text>
-      </View>
-    );
-  }
-
-  return (
-    <>
-      <StatusBar style={isDark ? "light" : "dark"} />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: "transparent" },
-        }}
-      >
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(main)" />
-        <Stack.Screen name="(admin)" />
-        <Stack.Screen name="(ar)" />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-    </>
-  );
-}
+import { ThemeProvider, useTheme } from "@/src/context/ThemeContext";
+import { AuthProvider } from "@/src/context/AuthContext";
+import { UserProvider } from "@/src/context/UserContext";
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <UserProvider>
-        <ThemeProvider>
-          <RootLayoutNav />
-        </ThemeProvider>
-      </UserProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <UserProvider>
+          <AppProviders />
+        </UserProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 
-const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#fff",
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: "#666",
-  },
-});
+function AppProviders() {
+  const {
+    paperTheme,
+    navigationTheme,
+    themeReady,
+    isDark,
+  } = useTheme();
+
+  if (!themeReady) {
+    return null;
+  }
+
+  return (
+    <PaperProvider theme={paperTheme}>
+      <NavigationThemeProvider value={navigationTheme}>
+        <StatusBar style={isDark ? "light" : "dark"} />
+
+        <Stack
+          screenOptions={{
+            headerShown: false,
+          }}
+        />
+      </NavigationThemeProvider>
+    </PaperProvider>
+  );
+}

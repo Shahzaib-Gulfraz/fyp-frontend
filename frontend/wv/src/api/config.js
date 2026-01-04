@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // API Base URL - Update this with your backend URL
 const API_BASE_URL = __DEV__
-    ? 'http://192.168.100.44:3000/api'  // Change to your computer's IP address
+      ? 'http://192.168.100.44:3000/api'  // Change to your computer's IP address
     : 'https://your-production-api.com/api';
 
 // Create axios instance

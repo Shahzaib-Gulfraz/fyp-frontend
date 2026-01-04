@@ -1,0 +1,24 @@
+﻿app/(main)/shop/dashboard/ManagementItem.tsx(49,13): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Object literal may only specify known properties, and 'size' does not exist in type 'Partial<unknown> & Attributes'.
+app/(main)/shop/dashboard/ManagementItem.tsx(120,14): error TS2304: Cannot find name 'spacing'.
+app/(main)/shop/dashboard/ManagementItem.tsx(121,19): error TS2304: Cannot find name 'spacing'.
+app/(main)/shop/dashboard/ManagementItem.tsx(142,17): error TS2304: Cannot find name 'spacing'.
+app/(main)/shop/dashboard/ManagementItem.tsx(153,17): error TS2304: Cannot find name 'spacing'.
+app/(main)/shop/dashboard/QuickActionCard.tsx(51,15): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Object literal may only specify known properties, and 'size' does not exist in type 'Partial<unknown> & Attributes'.
+app/(main)/shop/dashboard/QuickActionCard.tsx(113,14): error TS2304: Cannot find name 'spacing'.
+app/(main)/shop/dashboard/QuickActionCard.tsx(114,19): error TS2304: Cannot find name 'spacing'.
+app/(main)/shop/dashboard/QuickActionCard.tsx(141,17): error TS2304: Cannot find name 'spacing'.
+app/(main)/shop/dashboard/RecentOrderCard.tsx(175,14): error TS2304: Cannot find name 'spacing'.
+app/(main)/shop/dashboard/RecentOrderCard.tsx(176,19): error TS2304: Cannot find name 'spacing'.
+app/(main)/shop/dashboard/RecentOrderCard.tsx(188,19): error TS2304: Cannot find name 'spacing'.
+app/(main)/shop/dashboard/RecentOrderCard.tsx(217,19): error TS2304: Cannot find name 'spacing'.
+app/(main)/shop/dashboard/RecentOrderCard.tsx(225,17): error TS2304: Cannot find name 'spacing'.
+app/(main)/shop/dashboard/RecentOrderCard.tsx(240,17): error TS2304: Cannot find name 'spacing'.
+app/(main)/shop/dashboard/ShopDashboard.tsx(32,20): error TS2307: Cannot find module '@/src/components/shop/Header' or its corresponding type declarations.
+app/(main)/shop/dashboard/ShopDashboard.tsx(33,22): error TS2307: Cannot find module '@/src/components/shop/StatCard' or its corresponding type declarations.
+app/(main)/shop/dashboard/ShopDashboard.tsx(34,29): error TS2307: Cannot find module '@/src/components/shop/QuickActionCard' or its corresponding type declarations.
+app/(main)/shop/dashboard/ShopDashboard.tsx(35,28): error TS2307: Cannot find module '@/src/components/shop/ManagementItem' or its corresponding type declarations.
+app/(main)/shop/dashboard/ShopDashboard.tsx(36,29): error TS2307: Cannot find module '@/src/components/shop/RecentOrderCard' or its corresponding type declarations.
