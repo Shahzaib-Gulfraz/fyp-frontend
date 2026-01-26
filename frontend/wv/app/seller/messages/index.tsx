@@ -1,4 +1,4 @@
-import { View, Text, FlatList, TouchableOpacity, Image, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, Image, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useState, useCallback } from 'react';
 import { useTheme } from '@/src/context/ThemeContext';
@@ -20,7 +20,12 @@ export default function SellerMessagesList() {
             setLoading(true);
             // Get Shop ID from storage
             const shopData = await AsyncStorage.getItem('shop');
-            if (!shopData) return;
+            if (!shopData) {
+                console.error('[SellerMessages] No shop data found in storage');
+                Alert.alert('Error', 'Shop data not found. Please login again.');
+                router.replace('/(auth)/login');
+                return;
+            }
 
             const parsedShop = JSON.parse(shopData);
             setShop(parsedShop);
@@ -30,7 +35,8 @@ export default function SellerMessagesList() {
             console.log('[SellerMessages] Received conversations:', data.conversations?.length || 0);
             setConversations(data.conversations || []);
         } catch (error) {
-            console.error('Failed to load inquiries:', error);
+            console.error('[SellerMessages] Failed to load inquiries:', error);
+            Alert.alert('Error', 'Failed to load messages. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -44,9 +50,14 @@ export default function SellerMessagesList() {
 
     const renderItem = ({ item }: { item: any }) => {
         // Participant is the USER (customer)
-        const customer = item.participants?.[0];
+        const customer = item.participants?.[0] || {};
         const lastMsg = item.lastMessage;
         const isUnread = item.unreadCount && item.unreadCount[shop?._id] > 0;
+        
+        // Safely get profile image URL
+        const profileImageUrl = typeof customer?.profileImage === 'string' 
+            ? customer.profileImage 
+            : (customer?.profileImage as any)?.url || 'https://via.placeholder.com/50';
 
         return (
             <TouchableOpacity
@@ -58,7 +69,7 @@ export default function SellerMessagesList() {
                 onPress={() => router.push(`/seller/messages/${item._id}`)}
             >
                 <Image
-                    source={customer?.profileImage ? { uri: customer.profileImage } : { uri: 'https://via.placeholder.com/50' }}
+                    source={{ uri: profileImageUrl }}
                     style={styles.avatar}
                 />
                 <View style={styles.content}>

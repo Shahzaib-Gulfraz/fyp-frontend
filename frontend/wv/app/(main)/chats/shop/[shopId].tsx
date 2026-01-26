@@ -269,7 +269,15 @@ export default function ShopChatScreen() {
                                 }}
                             >
                                 <Image
-                                    source={{ uri: typeof item.images?.[0] === 'string' ? item.images[0] : item.images?.[0]?.url || item.thumbnail }}
+                                    source={{ 
+                                        uri: (() => {
+                                            const firstImg = item.images?.[0];
+                                            const thumb = item.thumbnail;
+                                            const imgUrl = typeof firstImg === 'string' ? firstImg : (firstImg as any)?.url;
+                                            const thumbUrl = typeof thumb === 'string' ? thumb : (thumb as any)?.url;
+                                            return imgUrl || thumbUrl || 'https://placehold.co/60';
+                                        })()
+                                    }}
                                     style={styles.productItemImage}
                                     contentFit="cover"
                                 />

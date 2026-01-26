@@ -123,7 +123,7 @@ const ProductCatalogScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <StatusBar style={isDark ? "light" : "dark"} />
 
       <ManagementTabs
@@ -131,20 +131,6 @@ const ProductCatalogScreen: React.FC = () => {
         subtitle="Manage your shop inventory"
         showBack
         onBackPress={() => router.back()}
-        rightAction={
-          <TouchableOpacity
-            onPress={handleCreateNew}
-            style={[
-              styles.addButton,
-              {
-                backgroundColor: colors.primary,
-                borderRadius: radius.full,
-              }
-            ]}
-          >
-            <Plus size={20} color={colors.background} />
-          </TouchableOpacity>
-        }
       />
 
       {/* Custom Tabs */}
@@ -207,12 +193,16 @@ const ProductCatalogScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 16,
+    paddingBottom: 32,
   },
   section: {
     marginBottom: 24,
@@ -230,6 +220,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     borderBottomWidth: 1,
     paddingHorizontal: 16,
+    backgroundColor: 'transparent',
   },
   tab: {
     flex: 1,
@@ -249,12 +240,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "500",
     marginTop: 4,
-  },
-  addButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
   },
 });
 

@@ -36,8 +36,12 @@ export default function SellerChatScreen() {
 
             setMessages((messages || []).reverse());
 
-            const user = conversation?.participants?.[0];
+            const user = conversation?.participants?.[0] || null;
             setCustomer(user);
+            
+            if (!user) {
+                console.warn('[SellerChat] No customer data found in conversation');
+            }
 
             // Get Shop ID to join room
             const shopData = await AsyncStorage.getItem('shop');
@@ -126,7 +130,11 @@ export default function SellerChatScreen() {
                 </TouchableOpacity>
 
                 <Image
-                    source={customer?.profileImage ? { uri: customer.profileImage } : { uri: 'https://via.placeholder.com/40' }}
+                    source={{
+                        uri: typeof customer?.profileImage === 'string'
+                            ? customer.profileImage
+                            : (customer?.profileImage as any)?.url || 'https://via.placeholder.com/40'
+                    }}
                     style={styles.headerAvatar}
                 />
 
@@ -168,7 +176,14 @@ export default function SellerChatScreen() {
                                     {/* Product Mention? */}
                                     {item.productMention && (
                                         <View style={styles.productCard}>
-                                            <Image source={{ uri: item.productMention.productImage }} style={styles.productImage} />
+                                            <Image
+                                                source={{
+                                                    uri: typeof item.productMention.productImage === 'string'
+                                                        ? item.productMention.productImage
+                                                        : (item.productMention.productImage as any)?.url || 'https://via.placeholder.com/60'
+                                                }}
+                                                style={styles.productImage}
+                                            />
                                             <View>
                                                 <Text style={styles.productName}>{item.productMention.productName}</Text>
                                                 <Text style={styles.productPrice}>${item.productMention.productPrice}</Text>

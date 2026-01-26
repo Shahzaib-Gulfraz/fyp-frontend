@@ -276,14 +276,17 @@ export default function SearchScreen() {
         {/* Product Grid */}
         {!productsLoading && filteredProducts.length > 0 ? (
           <View style={styles.productGrid}>
-            {filteredProducts.map(product => (
+            {filteredProducts.map(product => {
+              const thumbImg = product.thumbnail;
+              const thumbUri = typeof thumbImg === 'string' ? thumbImg : (thumbImg as any)?.url || 'https://placehold.co/400x400/png?text=No+Image';
+              return (
               <TouchableOpacity
                 key={product._id}
                 style={[styles.productCard, { backgroundColor: colors.surface }]}
                 onPress={() => router.push(`/buy/${product._id}`)}
               >
                 <Image
-                  source={{ uri: product.thumbnail?.url || 'https://placehold.co/400x400/png?text=No+Image' }}
+                  source={{ uri: thumbUri }}
                   style={styles.productImage}
                   resizeMode="cover"
                 />
@@ -304,7 +307,8 @@ export default function SearchScreen() {
                   </View>
                 </View>
               </TouchableOpacity>
-            ))}
+              );
+            })}
           </View>
         ) : productsLoading ? (
           <View style={styles.loadingContainer}>

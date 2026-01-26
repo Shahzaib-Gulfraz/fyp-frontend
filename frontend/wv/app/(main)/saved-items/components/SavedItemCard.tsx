@@ -61,7 +61,7 @@ const SavedItemCard: React.FC<SavedItemCardProps> = ({
       {/* Item Image */}
       <View style={styles.imageContainer}>
         <Image
-          source={{ uri: item.image }}
+          source={{ uri: typeof item.image === 'string' ? item.image : item.image?.url || 'https://via.placeholder.com/150' }}
           style={styles.image}
           resizeMode="cover"
         />

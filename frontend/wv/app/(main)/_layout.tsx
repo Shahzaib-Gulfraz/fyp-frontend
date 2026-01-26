@@ -50,7 +50,7 @@ export default function MainLayout() {
 
 
   const shopOwnerFooterTabs = [
-    { id: "dashboard", icon: LayoutDashboard, route: "/shop/dashboard" },
+    { id: "dashboard", icon: LayoutDashboard, route: "/shop/my/profile" },
     { id: "search", icon: Search, route: "/search" },
     { id: "productScan", icon: Camera, route: "/shop/addProduct" },
     { id: "chats", icon: MessageCircle, route: "/chats" },
@@ -61,7 +61,7 @@ export default function MainLayout() {
 
   const getActiveTab = () => {
     if (isShopOwner) {
-      if (pathname.includes("/shop/dashboard")) return "dashboard";
+      if (pathname.includes("/shop/my/profile")) return "dashboard";
       if (pathname.includes("/search")) return "search";
       if (pathname.includes("/addProduct")) return "addProduct";
       if (pathname.includes("/chats")) return "chats";

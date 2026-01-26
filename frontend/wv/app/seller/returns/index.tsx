@@ -190,7 +190,7 @@ export default function ShopReturnsScreen() {
                             {item.items?.map((returnItem: any, index: number) => (
                                 <View key={index} style={[styles.itemCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
                                     {returnItem.thumbnail && (
-                                        <Image source={{ uri: returnItem.thumbnail }} style={styles.itemThumbnail} />
+                                        <Image source={{ uri: typeof returnItem.thumbnail === 'string' ? returnItem.thumbnail : returnItem.thumbnail?.url || 'https://via.placeholder.com/60' }} style={styles.itemThumbnail} />
                                     )}
                                     <View style={styles.itemDetails}>
                                         <Text style={[styles.itemName, { color: colors.text }]} numberOfLines={2}>

@@ -40,7 +40,7 @@ const SavedItemsSection: React.FC<SavedItemsSectionProps> = ({
       }}
     >
       <Image
-        source={{ uri: item.image }}
+        source={{ uri: typeof item.image === 'string' ? item.image : item.image?.url || 'https://via.placeholder.com/150' }}
         style={{
           width: '100%',
           height: 140,

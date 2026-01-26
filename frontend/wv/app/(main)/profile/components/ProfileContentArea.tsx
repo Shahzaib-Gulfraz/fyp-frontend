@@ -42,7 +42,7 @@ export const ProfileContentArea = ({ theme, activeTab, userPosts, hasPosts, save
                     onPress={() => router.push(`/(main)/social/post/${item._id}`)}
                 >
                     <Image
-                        source={{ uri: item.image }}
+                        source={{ uri: typeof item.image === 'string' ? item.image : item.image?.url || 'https://via.placeholder.com/150' }}
                         style={styles.postImage}
                         contentFit="cover"
                     />

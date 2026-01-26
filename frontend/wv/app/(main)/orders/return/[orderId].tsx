@@ -172,7 +172,10 @@ export default function ReturnRequestScreen() {
                             )}
                         </View>
                         {item.thumbnail && (
-                            <Image source={{ uri: item.thumbnail }} style={styles.itemImage} />
+                            <Image 
+                                source={{ uri: typeof item.thumbnail === 'string' ? item.thumbnail : 'https://via.placeholder.com/80' }} 
+                                style={styles.itemImage} 
+                            />
                         )}
                         <View style={styles.itemInfo}>
                             <Text style={[styles.itemName, { color: colors.text }]} numberOfLines={2}>

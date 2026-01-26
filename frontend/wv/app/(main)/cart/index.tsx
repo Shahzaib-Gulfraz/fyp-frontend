@@ -139,14 +139,17 @@ export default function CartScreen() {
                             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
                         }
                     >
-                        {cart.items.map((item: any) => (
+                        {cart.items.map((item: any) => {
+                            const itemThumb = item.productId.thumbnail;
+                            const itemThumbUri = typeof itemThumb === 'string' ? itemThumb : (itemThumb as any)?.url || 'https://placehold.co/100x100/png?text=No+Image';
+                            return (
                             <View key={item._id} style={[styles.cartItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                                 <TouchableOpacity
                                     onPress={() => router.push(`/buy/${item.productId._id}`)}
                                     style={styles.itemContent}
                                 >
                                     <Image
-                                        source={{ uri: item.productId.thumbnail?.url || 'https://placehold.co/100x100/png?text=No+Image' }}
+                                        source={{ uri: itemThumbUri }}
                                         style={styles.itemImage}
                                     />
                                     <View style={styles.itemDetails}>
@@ -201,7 +204,8 @@ export default function CartScreen() {
                                     Rs. {item.price * item.quantity}
                                 </Text>
                             </View>
-                        ))}
+                            );
+                        })}
 
                         <View style={{ height: 120 }} />
                     </ScrollView>

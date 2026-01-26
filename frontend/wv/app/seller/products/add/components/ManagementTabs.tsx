@@ -89,40 +89,50 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 12,
+    paddingVertical: 20,
+    paddingTop: 8,
+    paddingBottom: 16,
     borderBottomWidth: 0,
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
   backButton: {
-    marginRight: 12,
+    marginRight: 16,
+    padding: 4,
   },
   title: {
-    fontSize: 16,
+    fontSize: 22,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   subtitle: {
-    fontSize: 12,
+    fontSize: 13,
+    marginTop: 2,
+    opacity: 0.7,
   },
   tabContainer: {
     flexDirection: 'row',
     borderBottomWidth: 1,
+    marginTop: 8,
   },
   tab: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 14,
   },
   iconWrapper: {
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },
   tabText: {
-    fontSize: 12,
-    marginTop: 4,
+    fontSize: 13,
+    marginTop: 6,
+    fontWeight: '600',
   },
 });
 

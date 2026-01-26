@@ -50,7 +50,7 @@ const PostsSection: React.FC<PostsSectionProps> = ({ posts, onCreatePost, onPost
       <View style={styles.postImageContainer}>
         {item.image ? (
           <Image
-            source={{ uri: item.image }}
+            source={{ uri: typeof item.image === 'string' ? item.image : item.image?.url || 'https://via.placeholder.com/150' }}
             style={styles.postImage}
             resizeMode="cover"
           />

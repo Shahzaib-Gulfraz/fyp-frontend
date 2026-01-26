@@ -224,7 +224,7 @@ export default function ShopOrdersScreen() {
                                 <View key={index} style={[styles.orderItemCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
                                     {orderItem.thumbnail && (
                                         <Image
-                                            source={{ uri: orderItem.thumbnail }}
+                                            source={{ uri: typeof orderItem.thumbnail === 'string' ? orderItem.thumbnail : orderItem.thumbnail?.url || 'https://via.placeholder.com/80' }}
                                             style={styles.itemThumbnail}
                                         />
                                     )}

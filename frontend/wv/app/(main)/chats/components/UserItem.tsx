@@ -18,7 +18,7 @@ const UserItem: React.FC<UserItemProps> = ({ user, onPress }) => {
       onPress={onPress}
     >
       <Image
-        source={{ uri: user.avatar }}
+        source={{ uri: typeof user.avatar === 'string' ? user.avatar : user.avatar?.url || 'https://via.placeholder.com/50' }}
         style={styles.avatar}
         contentFit="cover"
       />

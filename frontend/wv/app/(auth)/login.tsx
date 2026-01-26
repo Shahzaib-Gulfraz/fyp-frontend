@@ -131,7 +131,7 @@ export default function LoginScreen() {
           router.replace("/(main)/home");
         }
       } else {
-        router.replace("/(main)/shop/dashboard");
+        router.replace("/seller/dashboard");
       }
     } catch (e: any) {
       const msg = e.message ? e.message.toLowerCase() : "";

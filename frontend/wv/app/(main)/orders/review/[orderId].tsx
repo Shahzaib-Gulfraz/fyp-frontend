@@ -187,7 +187,10 @@ export default function ReviewOrderScreen() {
                     <View key={index} style={[styles.productCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                         <View style={styles.productHeader}>
                             {item.thumbnail && (
-                                <Image source={{ uri: item.thumbnail }} style={styles.productImage} />
+                                <Image 
+                                    source={{ uri: typeof item.thumbnail === 'string' ? item.thumbnail : 'https://via.placeholder.com/80' }} 
+                                    style={styles.productImage} 
+                                />
                             )}
                             <View style={styles.productInfo}>
                                 <Text style={[styles.productName, { color: colors.text }]} numberOfLines={2}>

@@ -91,6 +91,8 @@ export const ProductGrid = () => {
 
     const ProductCard = ({ item }: { item: any }) => {
         const isSaved = savedProductIds.has(item._id);
+        const thumbImg = item.thumbnail;
+        const thumbUri = typeof thumbImg === 'string' ? thumbImg : (thumbImg as any)?.url || 'https://placehold.co/400x400/png?text=No+Image';
 
         return (
             <TouchableOpacity
@@ -100,7 +102,7 @@ export const ProductGrid = () => {
             >
                 <View style={styles.imageContainer}>
                     <Image
-                        source={{ uri: item.thumbnail?.url || 'https://placehold.co/400x400/png?text=No+Image' }}
+                        source={{ uri: thumbUri }}
                         style={styles.image}
                         resizeMode="cover"
                     />

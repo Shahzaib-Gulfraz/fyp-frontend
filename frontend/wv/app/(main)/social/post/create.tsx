@@ -115,7 +115,10 @@ export default function CreatePostScreen() {
                 {/* Image Section */}
                 <View style={[styles.imageContainer, { backgroundColor: colors.surface, borderRadius: radius.lg }]}>
                     {image ? (
-                        <Image source={{ uri: image }} style={[styles.image, { borderRadius: radius.lg }]} />
+                        <Image 
+                            source={{ uri: typeof image === 'string' ? image : 'https://via.placeholder.com/300' }} 
+                            style={[styles.image, { borderRadius: radius.lg }]} 
+                        />
                     ) : (
                         <TouchableOpacity onPress={pickImage} style={styles.placeholder}>
                             <Ionicons name="camera-outline" size={48} color={colors.textSecondary} />

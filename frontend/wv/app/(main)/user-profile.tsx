@@ -250,7 +250,10 @@ export default function UserProfileScreen() {
                 <View style={styles.avatarSection}>
                     <TouchableOpacity onPress={handlePickImage} style={styles.avatarContainer}>
                         {profileImageUri ? (
-                            <Image source={{ uri: profileImageUri }} style={styles.avatar} />
+                            <Image 
+                                source={{ uri: typeof profileImageUri === 'string' ? profileImageUri : 'https://via.placeholder.com/100' }} 
+                                style={styles.avatar} 
+                            />
                         ) : (
                             <View style={styles.avatarPlaceholder}>
                                 <Ionicons name="person" size={50} color="#999" />

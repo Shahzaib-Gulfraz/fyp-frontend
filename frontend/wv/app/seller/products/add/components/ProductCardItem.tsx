@@ -40,7 +40,7 @@ const ProductCardItem: React.FC<ProductCardItemProps> = ({
       ]}>
         {/* Product Image */}
         <Image
-          source={{ uri: product.image }}
+          source={{ uri: typeof product.image === 'string' ? product.image : product.image?.url || 'https://via.placeholder.com/150' }}
           style={[
             styles.image,
             viewMode === 'grid' && styles.imageGrid,
@@ -257,10 +257,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: 8,
+    marginBottom: 4,
   },
   categoryTag: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
   },
   categoryText: {
     fontSize: 10,
@@ -269,6 +272,7 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 16,
     fontWeight: '700',
+    flexShrink: 0,
   },
   sizesRow: {
     flexDirection: 'row',
@@ -296,6 +300,8 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     marginTop: 8,
     borderTopWidth: 1,
+    flexWrap: 'wrap',
+    gap: 8,
   },
   actionButton: {
     flexDirection: 'row',

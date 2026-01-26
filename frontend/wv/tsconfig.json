@@ -6,10 +6,14 @@
       "@/*": [
         "./*"
       ]
-    }
+    },
+    "skipLibCheck": true
   },
   "include": [
     "**/*.ts",
     "**/*.tsx"
   ],
+  "exclude": [
+    "node_modules/expo-modules-core/tsconfig.json"
+  ]
 }

@@ -7,14 +7,15 @@ import * as ImagePicker from 'expo-image-picker';
 
 import { useTheme } from "@/src/context/ThemeContext";
 import tryOnService from "@/src/api/tryOnService";
+import savedItemService from '@/src/api/savedItemService';
+import productService from '@/src/api/productService';
+import cartService from '@/src/api/cartService';
 
 import TryOnHeader from "./components/TryOnHeader";
 import ClothingInfo from "./components/ClothingInfo";
 import ActionButtons from "./components/ActionButtons";
 import SavedItemsSection from "./components/SavedItemsSection";
 import TryOnHistory from "./components/TryOnHistory";
-
-import { MOCK_CLOTHING_ITEMS } from "./constants/mockData";
 
 import { ClothingItem, TryOnHistoryItem } from "./types";
 import { Camera, Image as ImageIcon, Sparkles } from "lucide-react-native";
@@ -53,14 +54,8 @@ const TryOnScreen = () => {
 
   const [savedItems, setSavedItems] = useState<ClothingItem[]>([]);
 
-  useEffect(() => {
-    fetchHistory();
-    fetchSavedItems();
-  }, []);
-
-  const fetchSavedItems = async () => {
+  const fetchSavedItems = React.useCallback(async () => {
     try {
-      const { savedItemService } = require('@/src/api/savedItemService');
       const response = await savedItemService.getSavedItems();
 
       let items: ClothingItem[] = [];
@@ -85,7 +80,6 @@ const TryOnScreen = () => {
       
       // Always fetch products from database
       try {
-        const productService = require('@/src/api/productService').default;
         const productsResponse = await productService.getProducts({ limit: 10, tryon: true });
 
         if (productsResponse?.products && productsResponse.products.length > 0) {
@@ -117,13 +111,13 @@ const TryOnScreen = () => {
       if (!initialProduct && items.length > 0) {
         setSelectedClothing(items[0]);
       }
-    } catch (error) {
-      console.log("Failed to fetch saved items", error);
+    } catch (_error) {
+      console.log("Failed to fetch saved items", _error);
       setSavedItems([]);
     }
-  };
+  }, [initialProduct]);
 
-  const fetchHistory = async () => {
+  const fetchHistory = React.useCallback(async () => {
     try {
       const response = await tryOnService.getHistory();
       if (response.success) {
@@ -139,10 +133,15 @@ const TryOnScreen = () => {
         })).filter((item: any) => item.image); // Only show items with results
         setHistoryItems(formattedHistory);
       }
-    } catch (error) {
-      console.log("Failed to fetch history", error);
+    } catch (_err) {
+      console.log("Failed to fetch history", _err);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchHistory();
+    fetchSavedItems();
+  }, [fetchHistory, fetchSavedItems]);
 
   /* ─────────────────────────────
      Handlers
@@ -232,9 +231,9 @@ const TryOnScreen = () => {
         Alert.alert("Success", "Virtual Try-On Generated!");
       }
 
-    } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to generate try-on");
-      console.error(error);
+    } catch (err: any) {
+      Alert.alert("Error", err.message || "Failed to generate try-on");
+      console.error(err);
     } finally {
       setIsGenerating(false);
     }
@@ -269,8 +268,6 @@ const TryOnScreen = () => {
     }
 
     try {
-      const cartService = require('@/src/api/cartService').default;
-
       // Extract productId as a string
       const productId = String((currentItem as any)._id || currentItem.id);
 
@@ -356,7 +353,7 @@ const TryOnScreen = () => {
                 <View style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 12, padding: 8, borderWidth: 1, borderColor: colors.border }}>
                   <Text style={{ fontSize: 12, color: colors.textSecondary, marginBottom: 6, textAlign: 'center' }}>Product</Text>
                   <Image
-                    source={{ uri: getGarmentImage(currentItem) || 'https://placehold.co/200x250/png?text=Product' }}
+                    source={{ uri: typeof getGarmentImage(currentItem) === 'string' ? getGarmentImage(currentItem) : 'https://placehold.co/200x250/png?text=Product' }}
                     style={{ width: '100%', height: 150, borderRadius: 8 }}
                     resizeMode="cover"
                   />
@@ -367,7 +364,7 @@ const TryOnScreen = () => {
                   <Text style={{ fontSize: 12, color: colors.textSecondary, marginBottom: 6, textAlign: 'center' }}>Your Photo</Text>
                   {userImage ? (
                     <Image
-                      source={{ uri: userImage }}
+                      source={{ uri: typeof userImage === 'string' ? userImage : 'https://via.placeholder.com/300' }}
                       style={{ width: '100%', height: 150, borderRadius: 8 }}
                       resizeMode="cover"
                     />
@@ -390,7 +387,7 @@ const TryOnScreen = () => {
                   ) : resultImage ? (
                     <TouchableOpacity onPress={() => setFullSizeImage(resultImage)}>
                       <Image
-                        source={{ uri: resultImage }}
+                        source={{ uri: typeof resultImage === 'string' ? resultImage : 'https://via.placeholder.com/300' }}
                         style={{ width: '100%', height: 150, borderRadius: 8 }}
                         resizeMode="cover"
                       />
@@ -540,7 +537,7 @@ const TryOnScreen = () => {
         >
           <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
             <Image
-              source={{ uri: fullSizeImage || '' }}
+              source={{ uri: typeof fullSizeImage === 'string' ? fullSizeImage : 'https://via.placeholder.com/600' }}
               style={{
                 width: Dimensions.get('window').width * 0.9,
                 height: Dimensions.get('window').height * 0.8,

@@ -98,7 +98,10 @@ export default function SuggestionsScreen() {
     return (
       <View style={styles.suggestionCard}>
         <View style={styles.userInfo}>
-          <Image source={{ uri: item.avatar }} style={styles.avatar} />
+          <Image 
+            source={{ uri: typeof item.avatar === 'string' ? item.avatar : 'https://via.placeholder.com/50' }} 
+            style={styles.avatar} 
+          />
           <View style={styles.userDetails}>
             <Text style={styles.userName}>{item.name}</Text>
             <Text style={styles.userUsername}>{item.username}</Text>

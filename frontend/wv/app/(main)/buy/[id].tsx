@@ -89,15 +89,17 @@ export default function ProductDetailScreen() {
         }
     };
 
-    const renderImageItem = ({ item }: { item: any }) => (
+    const renderImageItem = ({ item }: { item: any }) => {
+        const imgUri = typeof item === 'string' ? item : (item?.url || 'https://placehold.co/600x600/png?text=No+Image');
+        return (
         <View style={styles.imageSlide}>
             <Image
-                source={{ uri: item.url || 'https://placehold.co/600x600/png?text=No+Image' }}
+                source={{ uri: imgUri }}
                 style={styles.productImage}
                 resizeMode="cover"
             />
         </View>
-    );
+    );};
 
     const renderPaginationDots = () => {
         const images = product?.images || [];
@@ -141,9 +143,12 @@ export default function ProductDetailScreen() {
         );
     }
 
+    const thumbUrl = typeof product.thumbnail === 'string' 
+        ? product.thumbnail 
+        : product.thumbnail?.url || 'https://placehold.co/600x600/png?text=No+Image';
     const images = product.images && product.images.length > 0
         ? product.images
-        : [{ url: product.thumbnail?.url || 'https://placehold.co/600x600/png?text=No+Image' }];
+        : [{ url: thumbUrl }];
 
     const specifications = product.specifications ? Object.entries(product.specifications) : [];
 

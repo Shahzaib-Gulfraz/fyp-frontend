@@ -27,7 +27,7 @@ export default function ProductGrid({ products }: { products: any[] }) {
       activeOpacity={0.8}
     >
       <Image
-        source={{ uri: item.mediaUrl }}
+        source={{ uri: typeof item.mediaUrl === 'string' ? item.mediaUrl : item.mediaUrl?.url || 'https://via.placeholder.com/150' }}
         style={styles.image}
         resizeMode="cover"
       />

@@ -90,7 +90,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
             renderItem={({ item }) => (
               <View style={[styles.commentItem, { borderBottomColor: colors.border }]}>
                 <Image
-                  source={{ uri: item.userAvatar }}
+                  source={{ uri: typeof item.userAvatar === 'string' ? item.userAvatar : item.userAvatar?.url || 'https://via.placeholder.com/40' }}
                   style={styles.commentAvatar}
                 />
                 <View style={styles.commentContent}>

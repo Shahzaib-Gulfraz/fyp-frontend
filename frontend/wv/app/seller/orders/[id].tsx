@@ -208,7 +208,7 @@ export default function OrderDetailScreen() {
                     {order.items?.map((item: any, index: number) => (
                         <View key={index} style={[styles.itemCard, { borderColor: colors.border }]}>
                             {item.thumbnail && (
-                                <Image source={{ uri: item.thumbnail }} style={styles.itemImage} />
+                                <Image source={{ uri: typeof item.thumbnail === 'string' ? item.thumbnail : item.thumbnail?.url || 'https://via.placeholder.com/80' }} style={styles.itemImage} />
                             )}
                             <View style={styles.itemDetails}>
                                 <Text style={[styles.itemName, { color: colors.text }]}>{item.name}</Text>

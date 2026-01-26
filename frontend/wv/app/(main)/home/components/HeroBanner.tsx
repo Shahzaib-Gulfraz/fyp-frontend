@@ -51,7 +51,7 @@ export const HeroBanner = () => {
                 {banners.map((banner, index) => (
                     <View key={banner._id || index} style={styles.slide}>
                         <ImageBackground
-                            source={{ uri: banner.imageUrl }}
+                            source={{ uri: typeof banner.imageUrl === 'string' ? banner.imageUrl : banner.imageUrl?.url || 'https://via.placeholder.com/800x400' }}
                             style={styles.imageBackground}
                             imageStyle={{ borderRadius: 16 }}
                         >

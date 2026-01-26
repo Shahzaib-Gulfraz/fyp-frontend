@@ -161,7 +161,7 @@ const PreviewSection: React.FC<PreviewSectionProps> = ({
             </View>
 
             <Image
-              source={{ uri: imageUri }}
+              source={{ uri: typeof imageUri === 'string' ? imageUri : 'https://via.placeholder.com/300' }}
               style={[
                 styles.clothingOverlay,
                 {

@@ -163,7 +163,7 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
                             <Text style={styles.sectionTitle}>Banner Image</Text>
                             <TouchableOpacity style={styles.bannerUpload} onPress={() => pickImage('banner')}>
                                 {bannerUri ? (
-                                    <ImageBackground source={{ uri: bannerUri }} style={styles.bannerPreview} />
+                                    <ImageBackground source={{ uri: typeof bannerUri === 'string' ? bannerUri : 'https://via.placeholder.com/800x200' }} style={styles.bannerPreview} />
                                 ) : (
                                     <View style={styles.bannerPlaceholder}>
                                         <Ionicons name="image-outline" size={40} color={theme.colors.textSecondary} />

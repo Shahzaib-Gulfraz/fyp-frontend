@@ -78,9 +78,10 @@ export default function ChatListScreen() {
 
     // If for some reason we can't find other, show placeholder
     const displayName = isSelf ? 'Me' : otherParticipant.username;
-    const displayImage = !isSelf && otherParticipant.profileImage
-      ? otherParticipant.profileImage
-      : `https://ui-avatars.com/api/?name=${displayName}&background=random`;
+    const rawImage = !isSelf && otherParticipant.profileImage ? otherParticipant.profileImage : null;
+    const displayImage = typeof rawImage === 'string' 
+      ? rawImage 
+      : (rawImage as any)?.url || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random`;
 
     return (
       <TouchableOpacity

@@ -33,6 +33,17 @@ export default function PostCard({ post, onLikeToggle, onCommentPress, onUserPre
     const { spacing, radius, fonts } = tokens;
     const { user } = useUser();
 
+    // Safe URIs to prevent RCTImageView crashes when backend returns objects
+    const userProfileImage = typeof post.userId.profileImage === 'string'
+        ? post.userId.profileImage
+        : (post.userId.profileImage as any)?.url;
+
+    const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(post.userId.fullName || post.userId.username || 'User')}&background=random`;
+
+    const postImageUri = typeof post.image === 'string'
+        ? post.image
+        : (post.image as any)?.url || 'https://placehold.co/600x600/png?text=Post';
+
     // Correctly determine if liked by checking the likes array
     // Correctly determine if liked by checking the likes array
     const initialIsLiked = post.likes?.some((like: any) =>
@@ -95,7 +106,7 @@ export default function PostCard({ post, onLikeToggle, onCommentPress, onUserPre
                 >
                     <Image
                         source={{
-                            uri: post.userId.profileImage || `https://ui-avatars.com/api/?name=${post.userId.fullName}&background=random`
+                            uri: userProfileImage || fallbackAvatar
                         }}
                         style={[styles.avatar, { borderRadius: radius.full }]}
                     />
@@ -119,7 +130,7 @@ export default function PostCard({ post, onLikeToggle, onCommentPress, onUserPre
                 onPress={handleImageTap}
             >
                 <Image
-                    source={{ uri: post.image }}
+                    source={{ uri: postImageUri }}
                     style={styles.postImage}
                     resizeMode="cover"
                 />
@@ -141,10 +152,22 @@ export default function PostCard({ post, onLikeToggle, onCommentPress, onUserPre
                     }}
                     onPress={() => router.push(`/(main)/buy/${(post.productId as any)._id}`)}
                 >
-                    <Image
-                        source={{ uri: (post.productId as any).thumbnail?.url || (post.productId as any).thumbnail || (post.productId as any).images?.[0]?.url || 'https://placehold.co/50' }}
-                        style={{ width: 40, height: 40, borderRadius: 6, backgroundColor: '#f0f0f0' }}
-                    />
+                    {(() => {
+                        const product: any = post.productId;
+                        const thumb = typeof product?.thumbnail === 'string'
+                            ? product.thumbnail
+                            : product?.thumbnail?.url;
+                        const firstImage = Array.isArray(product?.images) && product.images.length > 0
+                            ? (typeof product.images[0] === 'string' ? product.images[0] : (product.images[0] as any)?.url)
+                            : undefined;
+                        const productImageUri = thumb || firstImage || 'https://placehold.co/50';
+                        return (
+                            <Image
+                                source={{ uri: productImageUri }}
+                                style={{ width: 40, height: 40, borderRadius: 6, backgroundColor: '#f0f0f0' }}
+                            />
+                        );
+                    })()}
                     <View style={{ marginLeft: 12, flex: 1 }}>
                         <Text numberOfLines={1} style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>
                             {(post.productId as any).name || 'Product'}

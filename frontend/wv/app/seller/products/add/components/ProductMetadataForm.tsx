@@ -7,6 +7,8 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Card, TextInput, Chip, Button, HelperText } from 'react-native-paper';
 import {
@@ -445,10 +447,16 @@ const ProductMetadataForm: React.FC<ProductMetadataFormProps> = ({ editProduct, 
   );
 
   return (
-    <ScrollView
-      style={{ backgroundColor: colors.background }}
-      showsVerticalScrollIndicator={false}
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
+      <ScrollView
+        style={{ backgroundColor: colors.background, flex: 1 }}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 40 }}
+      >
       <Card style={[
         styles.card,
         {
@@ -1077,7 +1085,8 @@ const ProductMetadataForm: React.FC<ProductMetadataFormProps> = ({ editProduct, 
           </Button>
         </Card.Content>
       </Card>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 

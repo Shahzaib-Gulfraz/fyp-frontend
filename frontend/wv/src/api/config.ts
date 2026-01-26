@@ -6,16 +6,19 @@ import { Platform } from 'react-native';
 
 // API Base URL - Update this with your backend URL
 const getBaseUrl = () => {
+    // Allow overriding via env (set EXPO_PUBLIC_API_URL in app config)
+    const envUrl = process.env.EXPO_PUBLIC_API_URL;
+    if (envUrl) return envUrl;
+
     if (__DEV__) {
         if (Platform.OS === 'web') {
             return 'http://localhost:3000/api';
         }
-        // For Android Emulator (10.0.2.2) or Physical Device (IP)
-        // Using specific IP for physical device testing
+        // LAN IP for device testing
         return 'http://192.168.100.44:3000/api';
     }
     return 'https://your-production-api.com/api';
-}
+};
 
 const API_BASE_URL = getBaseUrl();
 

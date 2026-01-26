@@ -1,17 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Switch, TouchableOpacity, Image, TextInput, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Switch, TouchableOpacity, Image, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { useTheme } from '@/src/context/ThemeContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Store, Image as ImageIcon, MapPin, Upload, ArrowLeft, Save } from 'lucide-react-native';
+import { Store, Image as ImageIcon, Upload, ArrowLeft } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import shopService from '@/src/api/shopService';
-import { appTheme } from '@/src/theme/appTheme';
 
 export default function StorefrontSettingsScreen() {
     const { colors } = useTheme();
     const router = useRouter();
-    const { spacing, radius, fonts } = appTheme.tokens;
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -159,7 +157,7 @@ export default function StorefrontSettingsScreen() {
                     <Text style={[styles.fieldLabel, { color: colors.text }]}>Shop Banner</Text>
                     <TouchableOpacity onPress={() => pickImage('banner')} style={styles.bannerContainer}>
                         {images.banner ? (
-                            <Image source={{ uri: images.banner }} style={styles.bannerImage} />
+                            <Image source={{ uri: typeof images.banner === 'string' ? images.banner : (images.banner as any)?.url || 'https://via.placeholder.com/800x200' }} style={styles.bannerImage} />
                         ) : (
                             <View style={[styles.placeholderBanner, { backgroundColor: colors.background }]}>
                                 <ImageIcon size={32} color={colors.textSecondary} />
@@ -176,7 +174,7 @@ export default function StorefrontSettingsScreen() {
                     <View style={{ alignItems: 'flex-start' }}>
                         <TouchableOpacity onPress={() => pickImage('logo')} style={styles.logoContainer}>
                             {images.logo ? (
-                                <Image source={{ uri: images.logo }} style={styles.logoImage} />
+                                <Image source={{ uri: typeof images.logo === 'string' ? images.logo : (images.logo as any)?.url || 'https://via.placeholder.com/100' }} style={styles.logoImage} />
                             ) : (
                                 <View style={[styles.placeholderLogo, { backgroundColor: colors.background }]}>
                                     <ImageIcon size={24} color={colors.textSecondary} />

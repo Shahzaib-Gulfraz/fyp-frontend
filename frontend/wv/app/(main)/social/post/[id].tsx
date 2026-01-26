@@ -19,7 +19,7 @@ export default function PostDetailScreen() {
     const [commentText, setCommentText] = useState('');
     const [submitting, setSubmitting] = useState(false);
 
-    const loadPost = async () => {
+    const loadPost = React.useCallback(async () => {
         try {
             const data = await postService.getPost(id as string);
             setPost(data.data.post);
@@ -29,11 +29,11 @@ export default function PostDetailScreen() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [id]);
 
     useEffect(() => {
         if (id) loadPost();
-    }, [id]);
+    }, [id, loadPost]);
 
     const handlePostComment = async () => {
         if (!commentText.trim()) return;
@@ -77,10 +77,16 @@ export default function PostDetailScreen() {
         );
     }
 
-    const renderComment = ({ item }: { item: Comment }) => (
+    const renderComment = ({ item }: { item: Comment }) => {
+        const profileImg = item.userId?.profileImage;
+        const avatarUri = typeof profileImg === 'string' 
+            ? profileImg 
+            : (profileImg as any)?.url || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.userId?.fullName || 'User')}&background=random`;
+        
+        return (
         <View style={[styles.commentContainer, { borderBottomColor: colors.border }]}>
             <Image
-                source={{ uri: item.userId?.profileImage || `https://ui-avatars.com/api/?name=${item.userId?.fullName}&background=random` }}
+                source={{ uri: avatarUri }}
                 style={[styles.avatar, { borderRadius: radius.full }]}
             />
             <View style={{ flex: 1, marginLeft: spacing.sm }}>
@@ -95,7 +101,8 @@ export default function PostDetailScreen() {
                 <Text style={{ color: colors.text, fontSize: 14 }}>{item.text}</Text>
             </View>
         </View>
-    );
+        );
+    };
 
     return (
         <KeyboardAvoidingView
@@ -106,7 +113,7 @@ export default function PostDetailScreen() {
             <Stack.Screen options={{ title: 'Post' }} />
 
             <FlatList
-                data={post.comments}
+                data={post?.comments || []}
                 keyExtractor={(item, index) => item._id || index.toString()}
                 renderItem={renderComment}
                 ListHeaderComponent={
@@ -123,10 +130,14 @@ export default function PostDetailScreen() {
                                     {post.likes.map((like: any, index: number) => {
                                         const user = typeof like === 'string' ? null : like;
                                         if (!user) return null;
+                                        const userImg = user.profileImage;
+                                        const userImgUri = typeof userImg === 'string' 
+                                            ? userImg 
+                                            : (userImg as any)?.url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName || 'User')}&background=random`;
                                         return (
                                             <View key={user._id || index} style={{ marginRight: 12, alignItems: 'center', width: 60 }}>
                                                 <Image
-                                                    source={{ uri: user.profileImage || `https://ui-avatars.com/api/?name=${user.fullName}&background=random` }}
+                                                    source={{ uri: userImgUri }}
                                                     style={{ width: 40, height: 40, borderRadius: 20, marginBottom: 4 }}
                                                 />
                                                 <Text numberOfLines={1} style={{ fontSize: 10, color: colors.text, textAlign: 'center' }}>

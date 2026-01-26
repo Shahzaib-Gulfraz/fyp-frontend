@@ -260,7 +260,10 @@ export default function EditProfileScreen() {
           <View style={styles.imageSection}>
             <TouchableOpacity onPress={pickImage} style={styles.imageContainer}>
               {profileImage ? (
-                <Image source={{ uri: profileImage }} style={styles.profileImage} />
+                <Image 
+                    source={{ uri: typeof profileImage === 'string' ? profileImage : 'https://via.placeholder.com/120' }} 
+                    style={styles.profileImage} 
+                />
               ) : (
                 <View style={[styles.profileImage, styles.placeholderImage]}>
                   <Ionicons name="person" size={40} color="#999" />

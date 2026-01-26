@@ -117,8 +117,9 @@ const CatalogSection: React.FC<CatalogSectionProps> = ({ onEditProduct }) => {
         {
           color: colors.text,
           fontFamily: fonts.bold,
-          fontSize: 24,
-          marginBottom: spacing.md,
+          fontSize: 26,
+          marginBottom: spacing.lg,
+          letterSpacing: 0.3,
         }
       ]}>
         Product Catalog
@@ -308,7 +309,7 @@ const CatalogSection: React.FC<CatalogSectionProps> = ({ onEditProduct }) => {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <View style={[styles.wrapper, { backgroundColor: colors.background }]}>
       <FlatList
         key={viewMode}
         data={filteredProducts}
@@ -329,8 +330,12 @@ const CatalogSection: React.FC<CatalogSectionProps> = ({ onEditProduct }) => {
 };
 
 const styles = StyleSheet.create({
+  wrapper: {
+    flex: 1,
+  },
   container: {
     flexGrow: 1,
+    paddingBottom: 24,
   },
   header: {
     marginTop: 16,

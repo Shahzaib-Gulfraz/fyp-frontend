@@ -1,8 +1,7 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTheme } from '@/src/context/ThemeContext';
-import { Chip } from 'react-native-paper';
-import { RotateCw, ChevronRight, Calendar, Tag, Camera } from 'lucide-react-native';
+import { ChevronRight, Calendar, Tag, Camera } from 'lucide-react-native';
 import { TryOnHistoryItem } from '../types';
 import { appTheme } from '@/src/theme/appTheme';
 
@@ -64,9 +63,8 @@ const TryOnHistory: React.FC<TryOnHistoryProps> = ({
 
       <View style={[styles.list, { paddingHorizontal: spacing.lg }]}>
         {items.map((item, index) => (
-          <Animated.View
+          <View
             key={item.id}
-            entering={FadeIn.duration(400).delay(index * 100)}
           >
             <TouchableOpacity
               activeOpacity={0.7}
@@ -86,7 +84,7 @@ const TryOnHistory: React.FC<TryOnHistoryProps> = ({
               <View style={styles.cardContent}>
                 <View style={styles.imageWrapper}>
                   <Image
-                    source={{ uri: item.image }}
+                    source={{ uri: typeof item.image === 'string' ? item.image : (item.image as any)?.url || 'https://via.placeholder.com/150' }}
                     style={[
                       styles.image,
                       { borderRadius: radius.sm }

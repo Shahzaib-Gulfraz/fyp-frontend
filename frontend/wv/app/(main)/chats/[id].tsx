@@ -1,12 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Image } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useTheme } from '@/src/context/ThemeContext';
 import { useSocket } from '@/src/context/SocketContext';
 import { chatService } from '@/src/api/chatService';
 import { useUser } from '@/src/context/UserContext';
 import { Message } from '@/src/types/chat';
-import { Send, ArrowLeft } from 'lucide-react-native';
+import { Send } from 'lucide-react-native';
 import { format } from 'date-fns';
 
 export default function ChatScreen() {
@@ -27,12 +27,11 @@ export default function ChatScreen() {
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
-  const [loading, setLoading] = useState(true);
   const [recipient, setRecipient] = useState<any>(null); // For header info
 
   const flatListRef = useRef<FlatList>(null);
 
-  const loadMessages = async () => {
+  const loadMessages = React.useCallback(async () => {
     try {
       const response = await chatService.getMessages(conversationId as string);
 
@@ -67,16 +66,14 @@ export default function ChatScreen() {
 
     } catch (error) {
       console.error('Load messages error:', error);
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [conversationId, user]);
 
   useEffect(() => {
     if (conversationId) {
       loadMessages();
     }
-  }, [conversationId]);
+  }, [conversationId, loadMessages]);
 
   // Real-time listener
   useEffect(() => {
@@ -210,7 +207,11 @@ export default function ChatScreen() {
       }}>
         {!isMe && (
           <Image
-            source={{ uri: recipient?.profileImage || `https://ui-avatars.com/api/?name=${recipient?.username || 'User'}&background=random` }}
+            source={{ 
+              uri: typeof recipient?.profileImage === 'string' 
+                ? recipient.profileImage 
+                : (recipient?.profileImage as any)?.url || `https://ui-avatars.com/api/?name=${encodeURIComponent(recipient?.username || 'User')}&background=random`
+            }}
             style={{ width: 28, height: 28, borderRadius: 14, marginRight: 8, alignSelf: 'flex-end', marginBottom: 4 }}
           />
         )}
@@ -241,7 +242,11 @@ export default function ChatScreen() {
           headerTitle: () => (
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Image
-                source={{ uri: recipient?.profileImage || `https://ui-avatars.com/api/?name=${recipient?.username || 'User'}&background=random` }}
+                source={{ 
+                  uri: typeof recipient?.profileImage === 'string' 
+                    ? recipient.profileImage 
+                    : (recipient?.profileImage as any)?.url || `https://ui-avatars.com/api/?name=${encodeURIComponent(recipient?.username || 'User')}&background=random`
+                }}
                 style={{ width: 32, height: 32, borderRadius: 16, marginRight: 8 }}
               />
               <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>

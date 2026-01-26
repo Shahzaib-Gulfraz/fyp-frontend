@@ -112,7 +112,10 @@ export default function NotificationsScreen() {
                 {/* Icon/Avatar based on type */}
                 <View style={styles.iconContainer}>
                     {item.sender?.profileImage ? (
-                        <Image source={{ uri: item.sender.profileImage }} style={styles.avatar} />
+                        <Image 
+                            source={{ uri: typeof item.sender.profileImage === 'string' ? item.sender.profileImage : 'https://via.placeholder.com/40' }} 
+                            style={styles.avatar} 
+                        />
                     ) : (
                         <View style={[styles.systemIcon, { backgroundColor: colors.primary + '20' }]}>
                             <Ionicons name="notifications" size={24} color={colors.primary} />

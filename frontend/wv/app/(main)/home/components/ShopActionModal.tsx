@@ -61,8 +61,11 @@ export const ShopActionsModal: React.FC<ShopActionsModalProps> = ({
         >
           {/* Shop Info Header */}
           <View style={[styles.shopActionsHeader, { borderBottomColor: colors.border }]}>
-            <Image source={{ uri: shop?.shopLogo }} style={styles.shopModalLogo} />
-            <View style={styles.shopInfoModal}>
+            <Image 
+                source={{ uri: typeof shop?.shopLogo === 'string' ? shop.shopLogo : 'https://via.placeholder.com/80' }} 
+                style={styles.shopModalLogo} 
+            />
+            <View style={styles.shopInfoModal}>>
               <Text style={[styles.shopModalName, { color: colors.text }]}>{shop?.shopName}</Text>
               <Text style={[styles.shopModalFollowers, { color: colors.textSecondary }]}>
                 15.2K followers

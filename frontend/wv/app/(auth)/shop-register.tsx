@@ -333,7 +333,7 @@ export default function RegisterShopScreen() {
       });
 
       setTimeout(() => {
-        router.replace("/(main)/shop/dashboard");
+        router.replace("/(main)/shop/my/profile");
       }, 1000);
     } catch (error: any) {
       console.error("Registration error:", error);

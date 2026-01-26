@@ -49,7 +49,7 @@ export const ShopPostCard: React.FC<ShopPostCardProps> = ({
       <View style={styles.postHeader}>
         <View style={styles.shopInfo}>
           <Image
-            source={{ uri: post.shopLogo }}
+            source={{ uri: typeof post.shopLogo === 'string' ? post.shopLogo : (post.shopLogo as any)?.url || 'https://via.placeholder.com/40' }}
             style={styles.shopLogo}
           />
           <View>
@@ -64,7 +64,7 @@ export const ShopPostCard: React.FC<ShopPostCardProps> = ({
 
       {/* Post Image */}
       <Image
-        source={{ uri: post.image }}
+        source={{ uri: typeof post.image === 'string' ? post.image : (post.image as any)?.url || 'https://via.placeholder.com/300' }}
         style={styles.postImage}
         resizeMode="cover"
       />
