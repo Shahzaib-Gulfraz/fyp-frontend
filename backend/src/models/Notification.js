@@ -1,64 +1,56 @@
 const mongoose = require('mongoose');
 
 const notificationSchema = new mongoose.Schema({
-    userId: {
+    recipient: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
+        required: true,
+        refPath: 'recipientModel', // Dynamic ref
+        index: true
     },
-
-    // Notification Details
-    type: {
-        type: String,
-        enum: ['order', 'message', 'review', 'promotion', 'system'],
-        required: true
-    },
-    title: {
+    recipientModel: {
         type: String,
         required: true,
-        trim: true
+        enum: ['User', 'Shop'],
+        default: 'User'
     },
-    message: {
+    sender: {
+        type: mongoose.Schema.Types.ObjectId,
+        refPath: 'senderModel' // Dynamic ref
+    },
+    senderModel: {
+        type: String,
+        enum: ['User', 'Shop'],
+        default: 'User'
+    },
+    type: {
+        type: String,
+        enum: ['friend_request', 'friend_accept', 'message', 'like', 'comment', 'system', 'order_status', 'new_order'],
+        required: true
+    },
+    // Reference to the related object (e.g., Post, Order, etc.)
+    refId: {
+        type: mongoose.Schema.Types.ObjectId,
+        refPath: 'refModel'
+    },
+    refModel: {
+        type: String,
+        enum: ['Post', 'Order', 'User', 'Product']
+    },
+    text: {
         type: String,
         required: true
     },
-
-    // Related entities
-    relatedEntityType: {
-        type: String,
-        enum: ['order', 'product', 'chat', 'shop', 'user']
-    },
-    relatedEntityId: {
-        type: mongoose.Schema.Types.ObjectId
-    },
-
-    // Action
-    actionUrl: {
-        type: String
-    },
-
-    // Status
     isRead: {
         type: Boolean,
         default: false
     },
-    readAt: {
-        type: Date
+    createdAt: {
+        type: Date,
+        default: Date.now
     }
-}, {
-    timestamps: true
 });
 
-// Indexes
-notificationSchema.index({ userId: 1, createdAt: -1 });
-notificationSchema.index({ isRead: 1 });
-notificationSchema.index({ type: 1 });
-
-// Mark as read method
-notificationSchema.methods.markAsRead = async function () {
-    this.isRead = true;
-    this.readAt = new Date();
-    return await this.save();
-};
+// Index for fast retrieval of user's notifications sorted by date
+notificationSchema.index({ recipient: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Notification', notificationSchema);

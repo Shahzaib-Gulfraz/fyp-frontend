@@ -9,6 +9,7 @@ import {
     ActivityIndicator,
     Alert,
     Image,
+    Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -78,7 +79,11 @@ export default function ReviewOrderScreen() {
             // Validate at least one review has rating
             const hasValidReview = Object.values(reviews).some((review: any) => review.rating > 0);
             if (!hasValidReview) {
-                Alert.alert('Error', 'Please rate at least one product');
+                if (Platform.OS === 'web') {
+                    alert('Please rate at least one product');
+                } else {
+                    Alert.alert('Error', 'Please rate at least one product');
+                }
                 return;
             }
 
@@ -99,15 +104,25 @@ export default function ReviewOrderScreen() {
 
             await Promise.all(promises);
 
-            Alert.alert('Success', 'Thank you for your reviews!', [
-                {
-                    text: 'OK',
-                    onPress: () => router.back()
-                }
-            ]);
+            if (Platform.OS === 'web') {
+                alert('Thank you for your reviews!');
+                router.back();
+            } else {
+                Alert.alert('Success', 'Thank you for your reviews!', [
+                    {
+                        text: 'OK',
+                        onPress: () => router.back()
+                    }
+                ]);
+            }
         } catch (error: any) {
             console.error('Submit reviews error:', error);
-            Alert.alert('Error', error.response?.data?.message || 'Failed to submit reviews');
+            const errorMsg = error.response?.data?.message || 'Failed to submit reviews';
+            if (Platform.OS === 'web') {
+                alert(errorMsg);
+            } else {
+                Alert.alert('Error', errorMsg);
+            }
         } finally {
             setSubmitting(false);
         }

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Sun, Moon, Settings } from 'lucide-react-native';
+import { Sun, Moon, Settings, ArrowLeft } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 
 interface ProfileHeaderProps {
@@ -17,7 +17,10 @@ export const ProfileHeader = ({ theme, toggleTheme, isDark, username }: ProfileH
     return (
         <View style={styles.topHeader}>
             <View style={styles.headerContent}>
-                <View style={styles.usernameContainer}>
+                <View style={[styles.usernameContainer, { flexDirection: 'row', alignItems: 'center', gap: 10 }]}>
+                    <TouchableOpacity onPress={() => router.back()}>
+                        <ArrowLeft size={24} color={theme.colors.text} />
+                    </TouchableOpacity>
                     <Text style={styles.usernameStylish}>{username}</Text>
                 </View>
 

@@ -1,64 +1,47 @@
 const mongoose = require('mongoose');
 
 const messageSchema = new mongoose.Schema({
-    chatId: {
+    conversationId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Chat',
-        required: true
+        ref: 'Conversation',
+        required: true,
+        index: true
     },
-    senderId: {
+    sender: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true
     },
-
-    // Message Content
-    content: {
+    text: {
         type: String,
-        required: true
+        required: true,
+        trim: true
     },
-    messageType: {
-        type: String,
-        enum: ['text', 'image', 'product', 'order'],
-        default: 'text'
-    },
-
-    // Attachments (Cloudinary URLs or references)
-    attachments: [{
-        type: {
-            type: String,
-            enum: ['image', 'product', 'order']
+    // Product mention support
+    productMention: {
+        productId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Product'
         },
-        url: String,
-        publicId: String,
-        referenceId: mongoose.Schema.Types.ObjectId // For product or order references
-    }],
-
-    // Status
+        // Cache product details for quick display
+        productName: String,
+        productImage: String,
+        productPrice: Number
+    },
     isRead: {
         type: Boolean,
         default: false
     },
-    readAt: {
-        type: Date
+    // Indicates if message is from the shop itself (for shop conversations)
+    isShopReply: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true
 });
 
-// Indexes
-messageSchema.index({ chatId: 1, createdAt: -1 });
-messageSchema.index({ senderId: 1 });
-messageSchema.index({ isRead: 1 });
-
-// Update chat's last message when a new message is created
-messageSchema.post('save', async function () {
-    const Chat = mongoose.model('Chat');
-    await Chat.findByIdAndUpdate(this.chatId, {
-        lastMessage: this.content,
-        lastMessageAt: this.createdAt,
-        lastMessageSenderId: this.senderId
-    });
-});
+// Compound index for scrolling history
+messageSchema.index({ conversationId: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Message', messageSchema);

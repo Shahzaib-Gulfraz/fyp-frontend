@@ -15,8 +15,8 @@ app.use(cors({
   origin: process.env.CORS_ORIGIN?.split(',') || '*',
   credentials: true
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Request logging (development only)
 if (process.env.NODE_ENV === 'development') {
@@ -39,6 +39,21 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
+const http = require('http');
+const socketService = require('./socket/socketService');
+
+// Create HTTP server
+const server = http.createServer(app);
+
+// Initialize Socket.IO
+socketService.init(server);
+
+app.listen = (...args) => {
+  server.listen(...args);
+};
+
+// ... existing code ...
+
 // API Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/products', require('./routes/products'));
@@ -51,7 +66,11 @@ app.use('/api/orders', require('./routes/orders'));
 app.use('/api/reviews', require('./routes/reviews'));
 app.use('/api/returns', require('./routes/returns'));
 app.use('/api/admin', require('./routes/admin'));
-
+app.use('/api/try-on', require('./routes/tryOn'));
+app.use('/api/friends', require('./routes/friends'));
+app.use('/api/posts', require('./routes/posts'));
+app.use('/api/chat', require('./routes/chat'));
+app.use('/api/notifications', require('./routes/notifications'));
 
 // 404 handler
 app.use(notFound);
@@ -59,7 +78,7 @@ app.use(notFound);
 // Error handler (must be last)
 app.use(errorHandler);
 
-app.listen(port, () => {
+server.listen(port, () => {
   console.log(`🚀 Server running on port ${port}`);
   console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
 });

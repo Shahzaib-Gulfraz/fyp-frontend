@@ -4,12 +4,14 @@ import { useTheme } from '@/src/context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { productService } from '@/src/api';
+import savedItemService from '@/src/api/savedItemService';
 
 export const ProductGrid = () => {
     const { colors } = useTheme();
     const router = useRouter();
     const [products, setProducts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [savedProductIds, setSavedProductIds] = useState<Set<string>>(new Set());
 
     useEffect(() => {
         const fetchProducts = async () => {
@@ -25,46 +27,116 @@ export const ProductGrid = () => {
             }
         };
 
+        const fetchSavedItems = async () => {
+            try {
+                const response = await savedItemService.getSavedItems();
+                if (response.data?.success) {
+                    const savedIds = new Set<string>(
+                        response.data.data.map((item: any) =>
+                            (item.product?._id || item.productId?._id || item.productId) as string
+                        )
+                    );
+                    setSavedProductIds(savedIds);
+                }
+            } catch (error) {
+                console.error('Failed to fetch saved items:', error);
+            }
+        };
+
         fetchProducts();
+        fetchSavedItems();
     }, []);
 
-    const ProductCard = ({ item }: { item: any }) => (
-        <TouchableOpacity
-            style={[styles.card, { backgroundColor: colors.surface }]}
-            activeOpacity={0.9}
-            onPress={() => router.push(`/buy/${item._id}`)}
-        >
-            <View style={styles.imageContainer}>
-                <Image
-                    source={{ uri: item.thumbnail?.url || 'https://placehold.co/400x400/png?text=No+Image' }}
-                    style={styles.image}
-                    resizeMode="cover"
-                />
-                <TouchableOpacity style={styles.heartButton}>
-                    <Ionicons name="heart-outline" size={20} color={colors.primary} />
-                </TouchableOpacity>
-            </View>
-            <View style={styles.details}>
-                <Text style={[styles.category, { color: colors.text + '80' }]}>
-                    {item.category?.name || 'Product'}
-                </Text>
-                <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
-                    {item.name}
-                </Text>
-                <View style={styles.row}>
-                    <Text style={[styles.price, { color: colors.primary }]}>
-                        Rs. {item.price}
+    const handleToggleSave = async (productId: string, e: any) => {
+        e.stopPropagation();
+
+        const isSaved = savedProductIds.has(productId);
+
+        // Optimistic update
+        const newSavedIds = new Set(savedProductIds);
+        if (isSaved) {
+            newSavedIds.delete(productId);
+        } else {
+            newSavedIds.add(productId);
+        }
+        setSavedProductIds(newSavedIds);
+
+        try {
+            if (isSaved) {
+                // Find the saved item ID to delete
+                const response = await savedItemService.getSavedItems();
+                const savedItem = response.data.data.find((item: any) =>
+                    (item.product?._id || item.productId?._id || item.productId) === productId
+                );
+                if (savedItem) {
+                    await savedItemService.removeSavedItem(savedItem._id);
+                }
+            } else {
+                await savedItemService.addSavedItem(productId);
+            }
+        } catch (error: any) {
+            // If item is already saved, just sync the state
+            if (error.status === 400 && error.message?.includes('already saved')) {
+                // Item is already saved in backend, update local state to match
+                const newSavedIds = new Set(savedProductIds);
+                newSavedIds.add(productId);
+                setSavedProductIds(newSavedIds);
+            } else {
+                // Revert on other errors
+                setSavedProductIds(savedProductIds);
+                console.error('Failed to toggle save:', error);
+            }
+        }
+    };
+
+    const ProductCard = ({ item }: { item: any }) => {
+        const isSaved = savedProductIds.has(item._id);
+
+        return (
+            <TouchableOpacity
+                style={[styles.card, { backgroundColor: colors.surface }]}
+                activeOpacity={0.9}
+                onPress={() => router.push(`/buy/${item._id}`)}
+            >
+                <View style={styles.imageContainer}>
+                    <Image
+                        source={{ uri: item.thumbnail?.url || 'https://placehold.co/400x400/png?text=No+Image' }}
+                        style={styles.image}
+                        resizeMode="cover"
+                    />
+                    <TouchableOpacity
+                        style={styles.heartButton}
+                        onPress={(e) => handleToggleSave(item._id, e)}
+                    >
+                        <Ionicons
+                            name={isSaved ? "heart" : "heart-outline"}
+                            size={20}
+                            color={isSaved ? colors.error : colors.primary}
+                        />
+                    </TouchableOpacity>
+                </View>
+                <View style={styles.details}>
+                    <Text style={[styles.category, { color: colors.text + '80' }]}>
+                        {item.category?.name || 'Product'}
                     </Text>
-                    <View style={styles.rating}>
-                        <Ionicons name="star" size={14} color="#FFD700" />
-                        <Text style={[styles.ratingText, { color: colors.text + '80' }]}>
-                            {item.stats?.rating || 4.0}
+                    <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
+                        {item.name}
+                    </Text>
+                    <View style={styles.row}>
+                        <Text style={[styles.price, { color: colors.primary }]}>
+                            Rs. {item.price}
                         </Text>
+                        <View style={styles.rating}>
+                            <Ionicons name="star" size={14} color="#FFD700" />
+                            <Text style={[styles.ratingText, { color: colors.text + '80' }]}>
+                                {item.stats?.rating || 4.0}
+                            </Text>
+                        </View>
                     </View>
                 </View>
-            </View>
-        </TouchableOpacity>
-    );
+            </TouchableOpacity>
+        );
+    };
 
     if (loading) {
         return (
@@ -78,6 +150,9 @@ export const ProductGrid = () => {
         <View style={styles.container}>
             <View style={styles.header}>
                 <Text style={[styles.title, { color: colors.text }]}>Featured Products</Text>
+                <TouchableOpacity onPress={() => router.push('/(main)/search')}>
+                    <Text style={[styles.browseButton, { color: colors.primary }]}>Browse All</Text>
+                </TouchableOpacity>
             </View>
             <View style={styles.grid}>
                 {products.map((product) => (
@@ -95,10 +170,17 @@ const styles = StyleSheet.create({
     },
     header: {
         marginBottom: 15,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
     },
     title: {
         fontSize: 18,
         fontWeight: 'bold',
+    },
+    browseButton: {
+        fontSize: 14,
+        fontWeight: '600',
     },
     grid: {
         flexDirection: 'row',

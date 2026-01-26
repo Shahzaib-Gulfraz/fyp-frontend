@@ -16,8 +16,10 @@ const protect = async (req, res, next) => {
             // Verify token
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-            // Get user from token (exclude password)
-            req.user = await User.findById(decoded.id).select('-password');
+            // Get user from token (exclude password, populate friends)
+            req.user = await User.findById(decoded.id)
+                .select('-password')
+                .populate('friends', 'username fullName profileImage');
 
             if (!req.user) {
                 return res.status(401).json({ message: 'User not found' });
@@ -79,7 +81,56 @@ const shopProtect = async (req, res, next) => {
 
             next();
         } catch (error) {
-            console.error('Shop Auth middleware error:', error);
+            console.error('B-DEBUG: Shop Auth middleware error:', error.message);
+            // console.error(error.stack); 
+            return res.status(401).json({ message: 'Not authorized, token failed', error: error.message });
+        }
+    }
+
+    if (!token) {
+        return res.status(401).json({ message: 'Not authorized, no token' });
+    }
+};
+
+/**
+ * Protect routes - Verify JWT token and Authenticate User OR Shop
+ */
+const protectAny = async (req, res, next) => {
+    let token;
+
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+        try {
+            token = req.headers.authorization.split(' ')[1];
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+            // Try to find User first
+            const user = await User.findById(decoded.id).select('-password');
+            if (user) {
+                if (!user.isActive) {
+                    return res.status(401).json({ message: 'Account is deactivated' });
+                }
+                req.user = user;
+                req.userType = 'user';
+                return next();
+            }
+
+            // If no user, try to find Shop
+            const Shop = require('../models/Shop');
+            const shop = await Shop.findById(decoded.id).select('-password');
+            if (shop) {
+                 if (!shop.isActive) {
+                    return res.status(401).json({ message: 'Shop is deactivated' });
+                }
+                req.shop = shop;
+                req.user = shop; // For compatibility
+                req.userType = 'shop';
+                return next();
+            }
+
+            return res.status(401).json({ message: 'User or Shop not found' });
+            
+        } catch (error) {
+            console.error('Auth middleware error:', error);
             return res.status(401).json({ message: 'Not authorized, token failed' });
         }
     }
@@ -117,8 +168,10 @@ const multiProtect = async (req, res, next) => {
             token = req.headers.authorization.split(' ')[1];
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-            // Try User first
-            const user = await User.findById(decoded.id).select('-password');
+            // Try User first (with friends populated)
+            const user = await User.findById(decoded.id)
+                .select('-password')
+                .populate('friends', 'username fullName profileImage');
             if (user && user.isActive) {
                 req.user = user;
                 return next();
@@ -143,4 +196,4 @@ const multiProtect = async (req, res, next) => {
     }
 };
 
-module.exports = { protect, restrictTo, shopProtect, isSelfShop, multiProtect };
+module.exports = { protect, restrictTo, shopProtect, isSelfShop, multiProtect, protectAny };

@@ -75,6 +75,65 @@ const userSchema = new mongoose.Schema({
     },
     lastLoginAt: {
         type: Date
+    },
+    resetPasswordToken: String,
+    resetPasswordExpire: Date,
+    // ============ SOCIAL/FRIEND SYSTEM FIELDS ============
+    friends: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }],
+    friendRequests: [{
+        from: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+            required: true
+        },
+        status: {
+            type: String,
+            enum: ['pending', 'accepted', 'rejected'],
+            default: 'pending'
+        },
+        createdAt: {
+            type: Date,
+            default: Date.now
+        }
+    }],
+    sentFriendRequests: [{
+        to: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+            required: true
+        },
+        status: {
+            type: String,
+            enum: ['pending', 'accepted', 'rejected'],
+            default: 'pending'
+        },
+        createdAt: {
+            type: Date,
+            default: Date.now
+        }
+    }],
+    isOnline: {
+        type: Boolean,
+        default: false
+    },
+    lastSeen: {
+        type: Date,
+        default: Date.now
+    },
+    privacy: {
+        profileVisibility: {
+            type: String,
+            enum: ['public', 'friends', 'private'],
+            default: 'public'
+        },
+        postVisibility: {
+            type: String,
+            enum: ['public', 'friends', 'private'],
+            default: 'friends'
+        }
     }
 }, {
     timestamps: true // Adds createdAt and updatedAt
@@ -82,6 +141,10 @@ const userSchema = new mongoose.Schema({
 
 // Index for faster queries (only non-unique fields)
 userSchema.index({ role: 1 });
+userSchema.index({ friends: 1 });
+userSchema.index({ 'friendRequests.from': 1 });
+userSchema.index({ 'sentFriendRequests.to': 1 });
+userSchema.index({ isOnline: 1 });
 
 // Hash password before saving
 userSchema.pre('save', async function () {
@@ -113,6 +176,9 @@ userSchema.methods.toPublicJSON = function () {
         isVerified: this.isVerified,
         bio: this.bio,
         location: this.location,
+        friendsCount: this.friends?.length || 0,
+        isOnline: this.isOnline,
+        lastSeen: this.lastSeen,
         createdAt: this.createdAt
     };
 };

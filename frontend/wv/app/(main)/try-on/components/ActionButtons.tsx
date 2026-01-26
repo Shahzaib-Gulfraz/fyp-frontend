@@ -1,6 +1,5 @@
 import React from "react";
 import { View, StyleSheet, TouchableOpacity, Text } from "react-native";
-import Animated, { FadeInUp } from "react-native-reanimated";
 import { ShoppingCart, Camera, Share2, Heart } from "lucide-react-native";
 import { useRouter } from "expo-router";
 
@@ -8,7 +7,7 @@ import { useTheme } from "@/src/context/ThemeContext";
 import { appTheme } from "@/src/theme/appTheme";
 
 interface ActionButtonsProps {
-  onBuyNow?: () => void;
+  onAddToCart?: () => void;
   onPost: () => void;
   onShare: () => void;
   isSaved?: boolean;
@@ -16,7 +15,7 @@ interface ActionButtonsProps {
 }
 
 const ActionButtons: React.FC<ActionButtonsProps> = ({
-  onBuyNow,
+  onAddToCart,
   onPost,
   onShare,
   isSaved = false,
@@ -26,32 +25,11 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
   const { colors } = useTheme();
   const { spacing, radius, fonts } = appTheme.tokens;
 
-  const handleBuyNow = () => {
-    if (onBuyNow) onBuyNow();
-    router.push("/buy"); // Navigate to /buy page
+  const handleAddToCart = () => {
+    if (onAddToCart) onAddToCart();
   };
 
   const actions = [
-    {
-      id: "post",
-      label: "Post to Feed",
-      subLabel: "Share your look",
-      icon: Camera,
-      color: colors.text,
-      bgColor: colors.surface,
-      textColor: colors.text,
-      onPress: onPost,
-    },
-    {
-      id: "share",
-      label: "Share",
-      subLabel: "With friends",
-      icon: Share2,
-      color: colors.text,
-      bgColor: colors.surface,
-      textColor: colors.text,
-      onPress: onShare,
-    },
     {
       id: "save",
       label: isSaved ? "Saved" : "Save",
@@ -66,8 +44,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
   ];
 
   return (
-    <Animated.View
-      entering={FadeInUp.duration(500).delay(300)}
+    <View
       style={[
         styles.container,
         {
@@ -77,9 +54,9 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
         },
       ]}
     >
-      {/* BUY NOW BUTTON */}
+      {/* ADD TO CART BUTTON */}
       <TouchableOpacity
-        onPress={handleBuyNow}
+        onPress={handleAddToCart}
         activeOpacity={0.9}
         style={[
           styles.primaryAction,
@@ -110,7 +87,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
                   },
                 ]}
               >
-                Buy Now
+                Add to Cart
               </Text>
               <Text
                 style={[
@@ -121,7 +98,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
                   },
                 ]}
               >
-                Secure checkout • Free shipping
+                Add item to your cart
               </Text>
             </View>
           </View>
@@ -212,7 +189,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
             );
           })}
       </View>
-    </Animated.View>
+    </View>
   );
 };
 

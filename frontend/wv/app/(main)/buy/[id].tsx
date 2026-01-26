@@ -20,6 +20,8 @@ import { useTheme } from '@/src/context/ThemeContext';
 import productService from '@/src/api/productService';
 import cartService from '@/src/api/cartService';
 import reviewService from '@/src/api/reviewService';
+import FriendSelectorModal from '@/components/social/FriendSelectorModal';
+import { Modal } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
@@ -37,12 +39,30 @@ export default function ProductDetailScreen() {
     const [reviews, setReviews] = useState<any[]>([]);
     const [reviewsLoading, setReviewsLoading] = useState(false);
 
+    // Share State
+    const [showShareOptions, setShowShareOptions] = useState(false);
+    const [showFriendSelector, setShowFriendSelector] = useState(false);
+
     useEffect(() => {
         const fetchProduct = async () => {
             try {
                 const response = await productService.getProduct(id as string);
                 if (response && response.product) {
                     setProduct(response.product);
+                    
+                    // Auto-select default specifications
+                    if (response.product.specifications) {
+                        const initialOptions: any = {};
+                        Object.entries(response.product.specifications).forEach(([key, value]: [string, any]) => {
+                            if (Array.isArray(value) && value.length > 0) {
+                                initialOptions[key] = value[0];
+                            } else {
+                                initialOptions[key] = value;
+                            }
+                        });
+                        setSelectedOptions(initialOptions);
+                    }
+                    
                     loadReviews(id as string);
                 }
             } catch (error) {
@@ -143,10 +163,87 @@ export default function ProductDetailScreen() {
                 >
                     <Ionicons name="arrow-back" size={24} color={colors.text} />
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.headerButton}>
+                <TouchableOpacity style={styles.headerButton} onPress={() => setShowShareOptions(true)}>
                     <Ionicons name="share-outline" size={24} color={colors.text} />
                 </TouchableOpacity>
             </View>
+
+            {/* Share Options Modal */}
+            <Modal
+                visible={showShareOptions}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={() => setShowShareOptions(false)}
+            >
+                <TouchableOpacity
+                    style={styles.modalOverlay}
+                    activeOpacity={1}
+                    onPress={() => setShowShareOptions(false)}
+                >
+                    <View style={[styles.shareOptionsContainer, { backgroundColor: colors.surface }]}>
+                        <Text style={[styles.shareTitle, { color: colors.text }]}>Share via</Text>
+
+                        <View style={styles.shareRow}>
+                            <TouchableOpacity
+                                style={styles.shareOption}
+                                onPress={() => {
+                                    setShowShareOptions(false);
+                                    setShowFriendSelector(true);
+                                }}
+                            >
+                                <View style={[styles.shareIcon, { backgroundColor: '#E3F2FD' }]}>
+                                    <Ionicons name="chatbubble-ellipses" size={24} color="#2196F3" />
+                                </View>
+                                <Text style={[styles.shareLabel, { color: colors.text }]}>Chat</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={styles.shareOption}
+                                onPress={() => {
+                                    setShowShareOptions(false);
+                                    router.push({
+                                        pathname: '/(main)/social/post/create',
+                                        params: {
+                                            productId: product._id,
+                                            image: product.thumbnail?.url || (product.images?.[0]?.url || ''),
+                                            productName: product.name
+                                        }
+                                    });
+                                }}
+                            >
+                                <View style={[styles.shareIcon, { backgroundColor: '#FCE4EC' }]}>
+                                    <Ionicons name="newspaper" size={24} color="#E91E63" />
+                                </View>
+                                <Text style={[styles.shareLabel, { color: colors.text }]}>Feed</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </TouchableOpacity>
+            </Modal>
+
+            <FriendSelectorModal
+                visible={showFriendSelector}
+                onClose={() => setShowFriendSelector(false)}
+                onSelect={async (friendId, friendName) => {
+                    setShowFriendSelector(false);
+                    try {
+                        const { chatService } = await import('@/src/api/chatService');
+                        // Send text with deep link or special marker
+                        // For V1, we send a text. In V2, we can implement structured messages.
+                        const messageText = `Check out this product: ${product.name}\n/buy/${product._id}`;
+                        await chatService.sendMessage(friendId, messageText);
+
+                        if (Platform.OS === 'web') {
+                            alert(`Sent to ${friendName}!`);
+                        } else {
+                            Alert.alert('Sent', `Product shared with ${friendName}`);
+                        }
+                    } catch (error) {
+                        console.error('Share error:', error);
+                        Alert.alert('Error', 'Failed to share product');
+                    }
+                }}
+            />
 
             <ScrollView showsVerticalScrollIndicator={false}>
                 {/* Image Gallery */}
@@ -314,11 +411,10 @@ export default function ProductDetailScreen() {
                         <TouchableOpacity
                             style={[styles.tryOnButton, { backgroundColor: colors.primary }]}
                             onPress={() => {
-                                if (Platform.OS === 'web') {
-                                    alert('AR Try-On feature coming soon!');
-                                } else {
-                                    Alert.alert('Virtual Try-On', 'AR Try-On feature coming soon!');
-                                }
+                                router.push({
+                                    pathname: '/(main)/try-on',
+                                    params: { product: JSON.stringify(product) }
+                                });
                             }}
                         >
                             <Ionicons name="camera-outline" size={24} color="#fff" />
@@ -428,7 +524,10 @@ export default function ProductDetailScreen() {
 
                     {/* Shop Info */}
                     {product.shopId && (
-                        <View style={[styles.shopContainer, { backgroundColor: colors.surface }]}>
+                        <TouchableOpacity
+                            style={[styles.shopContainer, { backgroundColor: colors.surface }]}
+                            onPress={() => router.push(`/(main)/shop/${product.shopId._id}`)}
+                        >
                             <View style={styles.shopInfo}>
                                 <Ionicons name="storefront-outline" size={24} color={colors.primary} />
                                 <View style={styles.shopDetails}>
@@ -438,10 +537,8 @@ export default function ProductDetailScreen() {
                                     </Text>
                                 </View>
                             </View>
-                            <TouchableOpacity>
-                                <Ionicons name="chevron-forward" size={24} color={colors.text + '60'} />
-                            </TouchableOpacity>
-                        </View>
+                            <Ionicons name="chevron-forward" size={24} color={colors.text + '60'} />
+                        </TouchableOpacity>
                     )}
 
                     <View style={{ height: 100 }} />
@@ -797,6 +894,43 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         flex: 1,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    shareOptionsContainer: {
+        width: '80%',
+        borderRadius: 20,
+        padding: 24,
+        alignItems: 'center',
+        elevation: 5,
+    },
+    shareTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginBottom: 24,
+    },
+    shareRow: {
+        flexDirection: 'row',
+        gap: 32,
+    },
+    shareOption: {
+        alignItems: 'center',
+        gap: 8,
+    },
+    shareIcon: {
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    shareLabel: {
+        fontSize: 14,
+        fontWeight: '500',
     },
     avatar: {
         width: 40,

@@ -3,7 +3,6 @@ import { View, Image, ScrollView, StyleSheet, Dimensions } from 'react-native';
 import { useTheme } from '@/src/context/ThemeContext';
 import { Chip } from 'react-native-paper';
 import { User, Sparkles, Sun, Cloud, Home } from 'lucide-react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
 import { ViewMode, FilterItem } from '../types';
 import { appTheme } from '@/src/theme/appTheme';
 import { Text } from 'react-native';
@@ -41,7 +40,7 @@ const PreviewSection: React.FC<PreviewSectionProps> = ({
   // Helper function to determine if a filter should be active
   const isFilterActive = (filterId: string) => {
     const isNoneFilter = filterId === 'none';
-    
+
     // In AR mode: "none" is active when no filter is selected OR when "none" is explicitly selected
     if (mode === 'ar') {
       if (isNoneFilter) {
@@ -49,17 +48,16 @@ const PreviewSection: React.FC<PreviewSectionProps> = ({
       }
       return currentFilter === filterId && currentFilter !== 'none';
     }
-    
+
     // In 3D mode: only show as active if explicitly selected (3D mode might not show filters at all)
     return currentFilter === filterId;
   };
 
   return (
-    <Animated.View
-      entering={FadeIn.duration(600)}
+    <View
       style={[
-        styles.previewContainer, 
-        { 
+        styles.previewContainer,
+        {
           borderColor: colors.border,
           backgroundColor: colors.surface,
           borderRadius: radius.lg,
@@ -75,7 +73,7 @@ const PreviewSection: React.FC<PreviewSectionProps> = ({
     >
       <View style={[
         styles.header,
-        { 
+        {
           borderBottomColor: colors.border,
           borderBottomWidth: StyleSheet.hairlineWidth,
           paddingHorizontal: spacing.md,
@@ -86,7 +84,7 @@ const PreviewSection: React.FC<PreviewSectionProps> = ({
         <View style={styles.headerContent}>
           <View style={[
             styles.modeIndicator,
-            { 
+            {
               backgroundColor: colors.primary + '15',
               borderRadius: radius.sm,
               paddingHorizontal: spacing.sm,
@@ -95,7 +93,7 @@ const PreviewSection: React.FC<PreviewSectionProps> = ({
           ]}>
             <Text style={[
               styles.modeText,
-              { 
+              {
                 color: colors.primary,
                 fontFamily: fonts.medium,
                 fontSize: 12,
@@ -103,71 +101,94 @@ const PreviewSection: React.FC<PreviewSectionProps> = ({
                 lineHeight: 16,
               }
             ]}>
-              {mode === 'ar' ? 'AR Preview' : '3D Preview'}
+              {mode === 'ar' ? 'AR Preview' : mode === 'generated' ? 'Try-On Result' : '3D Preview'}
             </Text>
           </View>
         </View>
       </View>
-      
+
       <View style={[
-        styles.previewArea, 
-        { 
+        styles.previewArea,
+        {
           padding: spacing.md,
           backgroundColor: colors.card,
         }
       ]}>
-        <View style={[
-          styles.avatarWithClothing, 
-          { 
-            backgroundColor: colors.background,
-            borderRadius: radius.md,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 4,
-            elevation: 2,
-          }
-        ]}>
+        {mode === 'generated' ? (
           <View style={[
-            styles.avatarSilhouette, 
-            { 
-              borderColor: colors.primary + '20',
-              borderWidth: StyleSheet.hairlineWidth,
-              borderRadius: radius.full,
-              backgroundColor: colors.background + '80',
+            styles.avatarWithClothing,
+            {
+              backgroundColor: colors.background,
+              borderRadius: radius.md,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.1,
+              shadowRadius: 4,
+              elevation: 2,
+              overflow: 'hidden'
             }
           ]}>
-            <User size={120} color={colors.primary + '30'} />
+            <Image
+              source={{ uri: imageUri }}
+              style={{ width: '100%', height: '100%' }}
+              resizeMode="contain"
+            />
           </View>
-          
-          <Image
-            source={{ uri: imageUri }}
-            style={[
-              styles.clothingOverlay,
-              { 
-                borderRadius: radius.full,
-                borderColor: colors.border,
-                borderWidth: 1,
-              }
-            ]}
-            resizeMode="contain"
-          />
-          
+        ) : (
           <View style={[
-            styles.gradientOverlay,
-            { 
-              borderRadius: radius.full,
-              borderWidth: 2,
-              borderColor: colors.primary + '20',
-              backgroundColor: colors.primary + '05',
+            styles.avatarWithClothing,
+            {
+              backgroundColor: colors.background,
+              borderRadius: radius.md,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.1,
+              shadowRadius: 4,
+              elevation: 2,
+              overflow: 'hidden'
             }
-          ]} />
-        </View>
+          ]}>
+            <View style={[
+              styles.avatarSilhouette,
+              {
+                borderColor: colors.primary + '20',
+                borderWidth: StyleSheet.hairlineWidth,
+                borderRadius: radius.full,
+                backgroundColor: colors.background + '80',
+              }
+            ]}>
+              <User size={120} color={colors.primary + '30'} />
+            </View>
+
+            <Image
+              source={{ uri: imageUri }}
+              style={[
+                styles.clothingOverlay,
+                {
+                  borderRadius: radius.full,
+                  borderColor: colors.border,
+                  borderWidth: 1,
+                }
+              ]}
+              resizeMode="contain"
+            />
+
+            <View style={[
+              styles.gradientOverlay,
+              {
+                borderRadius: radius.full,
+                borderWidth: 2,
+                borderColor: colors.primary + '20',
+                backgroundColor: colors.primary + '05',
+              }
+            ]} />
+          </View>
+        )}
 
         {mode === 'ar' && filters.length > 0 && (
           <View style={[
             styles.filtersContainer,
-            { 
+            {
               backgroundColor: colors.surface,
               borderRadius: radius.md,
               paddingHorizontal: spacing.sm,
@@ -177,7 +198,7 @@ const PreviewSection: React.FC<PreviewSectionProps> = ({
           ]}>
             <Text style={[
               styles.filtersTitle,
-              { 
+              {
                 color: colors.textTertiary,
                 fontFamily: fonts.medium,
                 fontSize: 13,
@@ -188,9 +209,9 @@ const PreviewSection: React.FC<PreviewSectionProps> = ({
             ]}>
               ENVIRONMENT FILTERS
             </Text>
-            
-            <ScrollView 
-              horizontal 
+
+            <ScrollView
+              horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={[
                 styles.filtersScrollContent,
@@ -199,7 +220,7 @@ const PreviewSection: React.FC<PreviewSectionProps> = ({
             >
               {filters.map(filter => {
                 const isActive = isFilterActive(filter.id);
-                
+
                 return (
                   <Chip
                     key={filter.id}
@@ -207,12 +228,12 @@ const PreviewSection: React.FC<PreviewSectionProps> = ({
                     onPress={() => onFilterSelect(filter.id)}
                     style={[
                       styles.filterChip,
-                      { 
-                        backgroundColor: isActive 
-                          ? colors.primary 
+                      {
+                        backgroundColor: isActive
+                          ? colors.primary
                           : colors.surface,
-                        borderColor: isActive 
-                          ? colors.primary 
+                        borderColor: isActive
+                          ? colors.primary
                           : colors.border,
                         borderRadius: radius.full,
                         marginRight: spacing.xs,
@@ -223,12 +244,12 @@ const PreviewSection: React.FC<PreviewSectionProps> = ({
                     ]}
                     textStyle={[
                       styles.filterText,
-                      { 
-                        color: isActive 
-                          ? colors.background 
+                      {
+                        color: isActive
+                          ? colors.background
                           : colors.textSecondary,
-                        fontFamily: isActive 
-                          ? fonts.medium 
+                        fontFamily: isActive
+                          ? fonts.medium
                           : fonts.regular,
                         fontSize: 11,
                         marginHorizontal: 6,
@@ -239,8 +260,8 @@ const PreviewSection: React.FC<PreviewSectionProps> = ({
                       const icon = getFilterIcon(filter.icon);
                       return React.cloneElement(icon, {
                         size: 12,
-                        color: isActive 
-                          ? colors.background 
+                        color: isActive
+                          ? colors.background
                           : colors.textSecondary
                       });
                     }}
@@ -253,11 +274,11 @@ const PreviewSection: React.FC<PreviewSectionProps> = ({
             </ScrollView>
           </View>
         )}
-        
+
         {mode === '3d' && (
           <View style={[
             styles.controlsHint,
-            { 
+            {
               backgroundColor: colors.surface,
               paddingHorizontal: spacing.md,
               paddingVertical: spacing.xs,
@@ -269,7 +290,7 @@ const PreviewSection: React.FC<PreviewSectionProps> = ({
           ]}>
             <Text style={[
               styles.hintText,
-              { 
+              {
                 color: colors.textTertiary,
                 fontFamily: fonts.regular,
                 fontSize: 11,
@@ -282,7 +303,7 @@ const PreviewSection: React.FC<PreviewSectionProps> = ({
           </View>
         )}
       </View>
-    </Animated.View>
+    </View>
   );
 };
 

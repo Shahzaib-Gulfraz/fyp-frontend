@@ -45,6 +45,24 @@ const authService = {
         }
     },
 
+    forgotPassword: async (email) => {
+        try {
+            const response = await api.post('/auth/forgot-password', { email });
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
+    },
+
+    resetPassword: async (data) => {
+        try {
+            const response = await api.post('/auth/reset-password', data);
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
+    },
+
     /**
      * Logout user
      */

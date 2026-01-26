@@ -2,6 +2,7 @@ const Order = require('../models/Order');
 const OrderItem = require('../models/OrderItem');
 const Product = require('../models/Product');
 const Shop = require('../models/Shop');
+const { createNotification } = require('./notificationController');
 
 /**
  * @desc    Create new order
@@ -56,6 +57,20 @@ const createOrder = async (req, res) => {
             paymentMethod: paymentMethod || 'cod',
             customerNotes
         });
+
+        // Send real-time notification to shop about new order
+        try {
+            await createNotification({
+                recipient: shopId,
+                sender: req.user._id,
+                type: 'new_order',
+                refId: order._id,
+                refModel: 'Order',
+                text: `New order #${orderNumber} received! Total: $${total.toFixed(2)}`
+            });
+        } catch (notifError) {
+            console.warn('Failed to send order notification:', notifError.message);
+        }
 
         res.status(201).json({
             message: 'Order created successfully',
@@ -170,6 +185,7 @@ const updateOrderStatus = async (req, res) => {
             return res.status(404).json({ message: 'Order not found' });
         }
 
+        const previousStatus = order.status;
         order.status = status;
 
         // Update timestamps based on status
@@ -184,6 +200,29 @@ const updateOrderStatus = async (req, res) => {
         }
 
         await order.save();
+
+        // Send notification to customer about status change
+        if (previousStatus !== status) {
+            const statusMessages = {
+                'processing': `Your order #${order.orderNumber} is now being processed`,
+                'shipped': `Your order #${order.orderNumber} has been shipped!`,
+                'delivered': `Your order #${order.orderNumber} has been delivered!`,
+                'cancelled': `Your order #${order.orderNumber} has been cancelled`
+            };
+
+            try {
+                await createNotification({
+                    recipient: order.userId,
+                    sender: order.shopId,
+                    type: 'order_status',
+                    refId: order._id,
+                    refModel: 'Order',
+                    text: statusMessages[status] || `Order #${order.orderNumber} status updated to ${status}`
+                });
+            } catch (notifError) {
+                console.warn('Failed to send status notification:', notifError.message);
+            }
+        }
 
         res.json({
             message: 'Order status updated',

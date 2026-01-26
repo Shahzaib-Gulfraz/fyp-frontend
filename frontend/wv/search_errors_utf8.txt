@@ -1,1 +1,0 @@
-﻿app/(main)/search/components/SearchHeader.tsx(59,17): error TS7006: Parameter 'input' implicitly has an 'any' type.

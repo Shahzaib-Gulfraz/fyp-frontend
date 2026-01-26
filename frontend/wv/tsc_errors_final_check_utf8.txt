@@ -1,8 +1,0 @@
-﻿app/(main)/buy/BuyNowScreen.tsx(12,24): error TS2307: Cannot find module '@/src/components/common' or its corresponding type declarations.
-app/(main)/buy/BuyNowScreen.tsx(18,8): error TS2307: Cannot find module '@/src/components/buy-now' or its corresponding type declarations.
-app/(main)/buy/BuyNowScreen.tsx(19,83): error TS2307: Cannot find module '@/src/types' or its corresponding type declarations.
-app/(main)/buy/components/OrderConfirmation.tsx(6,62): error TS2307: Cannot find module '@/src/types' or its corresponding type declarations.
-app/(main)/buy/components/OrderSummary.tsx(6,64): error TS2307: Cannot find module '@/src/types' or its corresponding type declarations.
-app/(main)/buy/components/PaymentMethod.tsx(6,52): error TS2307: Cannot find module '@/src/types' or its corresponding type declarations.
-app/(main)/buy/components/ShippingForm.tsx(13,33): error TS2307: Cannot find module '@/src/types' or its corresponding type declarations.
-app/(main)/buy/index.ts(25,17): error TS2304: Cannot find name 'ClothingItem'.

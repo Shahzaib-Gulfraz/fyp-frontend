@@ -1,5 +1,7 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+const sendEmail = require('../utils/sendEmail');
 
 /**
  * Generate JWT token
@@ -73,7 +75,7 @@ const login = async (req, res) => {
 
         if (!user) {
             console.log("❌ User not found:", email);
-            return res.status(401).json({ message: 'Invalid credentials' });
+            return res.status(404).json({ message: 'Email not found' });
         }
 
         // Check if account is active
@@ -88,7 +90,7 @@ const login = async (req, res) => {
 
         if (!isMatch) {
             console.log("❌ Password mismatch for:", email);
-            return res.status(401).json({ message: 'Invalid credentials' });
+            return res.status(401).json({ message: 'Invalid password' });
         }
 
         // Update last login
@@ -129,8 +131,23 @@ const getMe = async (req, res) => {
     try {
         console.log("/getMe")
         if (req.user) {
-            const user = await User.findById(req.user._id);
-            return res.json({ user: user.toPublicJSON() });
+            // Use req.user directly - it's already populated with friends from middleware
+            return res.json({
+                user: {
+                    id: req.user._id,
+                    username: req.user.username,
+                    email: req.user.email,
+                    fullName: req.user.fullName,
+                    phone: req.user.phone,
+                    bio: req.user.bio,
+                    location: req.user.location,
+                    profileImage: req.user.profileImage,
+                    role: req.user.role,
+                    friends: req.user.friends, // This is populated from middleware
+                    isVerified: req.user.isVerified,
+                    createdAt: req.user.createdAt
+                }
+            });
         } else if (req.shop) {
             // If it's a shop owner, return shop data under 'user' key for frontend compatibility
             // or just return the shop data.
@@ -276,11 +293,147 @@ const uploadAvatar = async (req, res) => {
     }
 };
 
+/**
+ * @desc    Search users (for finding friends)
+ * @route   GET /api/auth/users/search
+ * @access  Private
+ */
+const searchUsers = async (req, res) => {
+    try {
+        const { q, limit = 20 } = req.query;
+        const currentUserId = req.user._id;
+
+        if (!q || q.trim().length < 2) {
+            return res.status(400).json({
+                success: false,
+                message: 'Search query must be at least 2 characters'
+            });
+        }
+
+        const searchRegex = new RegExp(q, 'i');
+
+        const users = await User.find({
+            _id: { $ne: currentUserId },
+            isActive: true,
+            $or: [
+                { username: searchRegex },
+                { fullName: searchRegex }
+            ]
+        })
+            .select('username fullName profileImage bio')
+            .limit(parseInt(limit));
+
+        res.json({
+            success: true,
+            data: {
+                users: users.map(u => u.toPublicJSON()),
+                count: users.length
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Server error',
+            error: error.message
+        });
+    }
+};
+
+
+const forgotPassword = async (req, res) => {
+    try {
+        const user = await User.findOne({ email: req.body.email });
+        if (!user) {
+            return res.status(404).json({ message: 'Email not found' });
+        }
+
+        // Generate OTP
+        const resetToken = Math.floor(100000 + Math.random() * 900000).toString();
+
+        // Hash and set to resetPasswordToken
+        user.resetPasswordToken = crypto
+            .createHash('sha256')
+            .update(resetToken)
+            .digest('hex');
+
+        // Set expire (10 mins)
+        user.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
+
+        await user.save({ validateBeforeSave: false });
+
+        const message = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #333;">Password Reset Request</h2>
+                <p>You requested a password reset for your WearVirtually account.</p>
+                <div style="background: #f4f4f4; padding: 20px; border-radius: 5px; text-align: center; margin: 20px 0;">
+                    <p style="margin: 0; font-size: 14px; color: #666;">Your verification code is:</p>
+                    <h1 style="color: #000; letter-spacing: 5px; margin: 10px 0;">${resetToken}</h1>
+                    <p style="margin: 0; font-size: 12px; color: #999;">Valid for 10 minutes</p>
+                </div>
+                <p>If you didn't request this, please ignore this email.</p>
+            </div>
+        `;
+
+        try {
+            await sendEmail({
+                email: user.email,
+                subject: 'WearVirtually Password Reset Code',
+                message
+            });
+
+            res.status(200).json({ success: true, message: 'Email sent' });
+        } catch (error) {
+            user.resetPasswordToken = undefined;
+            user.resetPasswordExpire = undefined;
+            await user.save({ validateBeforeSave: false });
+            return res.status(500).json({ message: 'Email could not be sent' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
+const resetPassword = async (req, res) => {
+    try {
+        const { email, otp, password } = req.body;
+        
+        // Hash OTP to compare
+        const resetPasswordToken = crypto
+            .createHash('sha256')
+            .update(otp.toString())
+            .digest('hex');
+
+        const user = await User.findOne({
+            email,
+            resetPasswordToken,
+            resetPasswordExpire: { $gt: Date.now() }
+        });
+
+        if (!user) {
+            return res.status(400).json({ message: 'Invalid code or code has expired' });
+        }
+
+        // Set new password
+        user.password = password; 
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpire = undefined;
+
+        await user.save();
+
+        res.status(200).json({ success: true, message: 'Password updated successfully' });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
 module.exports = {
     register,
     login,
     getMe,
     updateProfile,
     changePassword,
-    uploadAvatar
+    uploadAvatar,
+    searchUsers,
+    forgotPassword,
+    resetPassword
 };

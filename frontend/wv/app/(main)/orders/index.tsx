@@ -9,7 +9,7 @@ import {
     RefreshControl,
     Image,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/context/ThemeContext';
@@ -45,11 +45,13 @@ export default function OrdersScreen() {
     const [reviewedOrders, setReviewedOrders] = useState<Set<string>>(new Set());
     const [orderReturns, setOrderReturns] = useState<{ [key: string]: any }>({});
 
-    useEffect(() => {
-        loadUserReviews();
-        loadUserReturns();
-        loadOrders();
-    }, [selectedFilter]);
+    useFocusEffect(
+        React.useCallback(() => {
+            loadUserReviews();
+            loadUserReturns();
+            loadOrders();
+        }, [selectedFilter])
+    );
 
     const loadUserReviews = async () => {
         try {

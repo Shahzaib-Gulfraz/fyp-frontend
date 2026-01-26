@@ -4,8 +4,9 @@ import { useAuth } from "@/src/context/AuthContext";
 
 type UserRole = 'user' | 'shop_owner';
 
-interface User {
+export interface User {
   id: string;
+  _id?: string; // Mongoose ID
   username: string;
   email: string;
   role: UserRole;
@@ -36,31 +37,58 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Mock login function - replace with actual API call
+  // Load user from storage on mount
+  React.useEffect(() => {
+    const initUser = async () => {
+      try {
+        const { authService } = await import('@/src/api');
+        const storedUser = await authService.getStoredUser();
+        if (storedUser) {
+          // Normalize ID
+          const normalizedUser = {
+            ...storedUser,
+            id: storedUser.id || storedUser._id
+          };
+          setUser(normalizedUser);
+          setAuthenticated(true);
+        } else {
+          // Try to fetch profile if token exists
+          const isAuth = await authService.isAuthenticated();
+          if (isAuth) {
+            setAuthenticated(true);
+            await refreshProfile();
+          }
+        }
+      } catch (e) {
+        console.log('User init error', e);
+      }
+    };
+    initUser();
+  }, []);
+
   const login = async (email: string, password: string) => {
     setIsLoading(true);
+    try {
+      const { authService } = await import('@/src/api');
+      const response = await authService.login(email, password);
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
+      const loggedInUser = response.user;
+      // Normalize ID
+      const userWithId = {
+        ...loggedInUser,
+        id: loggedInUser.id || loggedInUser._id
+      };
 
-    // Mock user data - in real app, this would come from your API
-    const mockUser: User = {
-      id: '1',
-      username: email.includes('shop') ? 'fashionhub' : 'john_doe',
-      email,
-      role: email.includes('shop') ? 'shop_owner' : 'user',
-      fullName: email.includes('shop') ? 'Fashion Hub Boutique' : 'John Doe',
-      phone: '+1 (555) 123-4567',
-      profileImage: email.includes('shop')
-        ? 'https://images.unsplash.com/photo-1562157873-818bc0726f68?w=400'
-        : 'https://images.unsplash.com/photo-1494790108755-2616b786d4d9?w=400',
-      shopId: email.includes('shop') ? 'shop_123' : undefined,
-      bio: 'Fashion enthusiast • Virtual try-on expert',
-      location: 'New York, USA',
-    };
+      setUser(userWithId);
+      setAuthenticated(true);
 
-    setUser(mockUser);
-    setIsLoading(false);
+      return response;
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const logout = async () => {

@@ -1,4 +1,4 @@
-export type ViewMode = '3d' | 'ar';
+export type ViewMode = '3d' | 'ar' | 'generated';
 
 export interface ClothingItem {
   id: string;

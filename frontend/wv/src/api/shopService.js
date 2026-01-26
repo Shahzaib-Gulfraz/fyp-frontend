@@ -1,5 +1,6 @@
 import api from './config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
 /**
  * Shop Service
@@ -40,9 +41,14 @@ const shopService = {
     /**
      * Get shop products
      */
-    getShopProducts: async (shopId) => {
+    getShopProducts: async (shopId, filters = {}) => {
         try {
-            const response = await api.get(`/shops/${shopId}/products`);
+            const params = new URLSearchParams();
+            if (filters.search) params.append('search', filters.search);
+            if (filters.category) params.append('category', filters.category);
+            if (filters.sort) params.append('sort', filters.sort);
+
+            const response = await api.get(`/shops/${shopId}/products?${params.toString()}`);
             return response.data;
         } catch (error) {
             throw error;
@@ -67,31 +73,45 @@ const shopService = {
             // Add logo
             if (images.logo) {
                 console.log('Adding logo to formData:', images.logo);
-                // For React Native, we use the {uri, name, type} object
-                // If this is Web, we'd need a different approach, but sticking to RN for now
-                formData.append('logo', {
-                    uri: images.logo,
-                    type: 'image/jpeg',
-                    name: 'logo.jpg',
-                });
+
+                const isWebOrBlob = Platform.OS === 'web' || (typeof images.logo === 'string' && images.logo.startsWith('blob:'));
+
+                if (isWebOrBlob) {
+                    // Web or Chrome Debugger: Fetch blob from blob: URI
+                    const response = await fetch(images.logo);
+                    const blob = await response.blob();
+                    formData.append('logo', blob, 'logo.jpg');
+                } else {
+                    // Native: Use object with uri, type, name
+                    formData.append('logo', {
+                        uri: images.logo,
+                        type: 'image/jpeg',
+                        name: 'logo.jpg',
+                    });
+                }
             }
 
             // Add banner
             if (images.banner) {
                 console.log('Adding banner to formData:', images.banner);
-                formData.append('banner', {
-                    uri: images.banner,
-                    type: 'image/jpeg',
-                    name: 'banner.jpg',
-                });
+
+                const isWebOrBlob = Platform.OS === 'web' || (typeof images.banner === 'string' && images.banner.startsWith('blob:'));
+
+                if (isWebOrBlob) {
+                    const response = await fetch(images.banner);
+                    const blob = await response.blob();
+                    formData.append('banner', blob, 'banner.jpg');
+                } else {
+                    formData.append('banner', {
+                        uri: images.banner,
+                        type: 'image/jpeg',
+                        name: 'banner.jpg',
+                    });
+                }
             }
 
             console.log('Sending register request to /shops/register...');
-            const response = await api.post('/shops/register', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
-            });
+            const response = await api.post('/shops/register', formData);
 
             console.log('Register request successful:', !!response.data.token);
 
@@ -151,6 +171,7 @@ const shopService = {
 
             // Add text fields
             Object.keys(shopData).forEach(key => {
+                if (key === 'logo' || key === 'banner') return; // Skip images here
                 if (shopData[key] !== null && shopData[key] !== undefined) {
                     if (typeof shopData[key] === 'object') {
                         formData.append(key, JSON.stringify(shopData[key]));
@@ -160,31 +181,45 @@ const shopService = {
                 }
             });
 
-            // Add logo if it's a new URI (not http)
+            // Add logo
             if (images.logo && !images.logo.startsWith('http')) {
                 console.log('F-DEBUG: Uploading new logo:', images.logo);
-                formData.append('logo', {
-                    uri: images.logo,
-                    type: 'image/jpeg',
-                    name: 'logo.jpg',
-                });
+
+                const isWebOrBlob = Platform.OS === 'web' || (typeof images.logo === 'string' && images.logo.startsWith('blob:'));
+
+                if (isWebOrBlob) {
+                    const response = await fetch(images.logo);
+                    const blob = await response.blob();
+                    formData.append('logo', blob, 'logo.jpg');
+                } else {
+                    formData.append('logo', {
+                        uri: images.logo,
+                        type: 'image/jpeg',
+                        name: 'logo.jpg',
+                    });
+                }
             }
 
-            // Add banner if it's a new URI (not http)
+            // Add banner
             if (images.banner && !images.banner.startsWith('http')) {
                 console.log('F-DEBUG: Uploading new banner:', images.banner);
-                formData.append('banner', {
-                    uri: images.banner,
-                    type: 'image/jpeg',
-                    name: 'banner.jpg',
-                });
+
+                const isWebOrBlob = Platform.OS === 'web' || (typeof images.banner === 'string' && images.banner.startsWith('blob:'));
+
+                if (isWebOrBlob) {
+                    const response = await fetch(images.banner);
+                    const blob = await response.blob();
+                    formData.append('banner', blob, 'banner.jpg');
+                } else {
+                    formData.append('banner', {
+                        uri: images.banner,
+                        type: 'image/jpeg',
+                        name: 'banner.jpg',
+                    });
+                }
             }
 
-            const response = await api.put(`/shops/${shopId}`, formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
-            });
+            const response = await api.put(`/shops/${shopId}`, formData);
 
             // Update local storage if shop data returned
             if (response.data.shop) {
@@ -196,6 +231,85 @@ const shopService = {
             throw error;
         }
     },
+
+    /**
+     * Follow Shop
+     */
+    followShop: async (shopId) => {
+        try {
+            const response = await api.post(`/shops/${shopId}/follow`);
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
+    },
+
+    /**
+     * Unfollow Shop
+     */
+    unfollowShop: async (shopId) => {
+        try {
+            const response = await api.delete(`/shops/${shopId}/follow`);
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
+    },
+
+    /**
+     * Check Follow Status
+     */
+    checkFollowStatus: async (shopId) => {
+        try {
+            const response = await api.get(`/shops/${shopId}/is-following`);
+            return response.data;
+        } catch (error) {
+            // Likely 401 if not logged in
+            return { isFollowing: false };
+        }
+    },
+
+    /**
+     * Get Shop Reviews
+     */
+    getShopReviews: async (shopId) => {
+        try {
+            const response = await api.get(`/shops/${shopId}/reviews`);
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
+    },
+
+    /**
+     * Get Shop Dashboard Stats
+     */
+    getShopStats: async () => {
+        try {
+            const response = await api.get('/shops/my/stats');
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
+    },
+
+    forgotPassword: async (email) => {
+        try {
+            const response = await api.post('/shops/forgot-password', { email });
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
+    },
+
+    resetPassword: async (data) => {
+        try {
+            const response = await api.post('/shops/reset-password', data);
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
+    }
 };
 
 export default shopService;

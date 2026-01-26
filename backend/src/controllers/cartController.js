@@ -38,7 +38,14 @@ const getCart = async (req, res) => {
  */
 const addToCart = async (req, res) => {
     try {
-        const { productId, quantity = 1, selectedOptions = {} } = req.body;
+        const { productId, quantity = 1, size, color, selectedOptions = {} } = req.body;
+
+        console.log('Add to cart request:', { productId, quantity, size, color });
+
+        // Validate productId
+        if (!productId) {
+            return res.status(400).json({ message: 'Product ID is required' });
+        }
 
         // Validate product exists and is active
         const product = await Product.findById(productId);
@@ -60,6 +67,11 @@ const addToCart = async (req, res) => {
             cart = new Cart({ userId: req.user._id, items: [] });
         }
 
+        // Merge size and color into selectedOptions
+        const options = { ...selectedOptions };
+        if (size) options.size = size;
+        if (color) options.color = color;
+
         // Check if item already exists in cart
         const existingItemIndex = cart.items.findIndex(
             item => item.productId.toString() === productId
@@ -68,14 +80,14 @@ const addToCart = async (req, res) => {
         if (existingItemIndex > -1) {
             // Update existing item
             cart.items[existingItemIndex].quantity += quantity;
-            cart.items[existingItemIndex].selectedOptions = selectedOptions;
+            cart.items[existingItemIndex].selectedOptions = options;
             cart.items[existingItemIndex].price = product.price;
         } else {
             // Add new item
             cart.items.push({
                 productId,
                 quantity,
-                selectedOptions,
+                selectedOptions: options,
                 price: product.price
             });
         }

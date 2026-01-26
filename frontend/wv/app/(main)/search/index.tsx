@@ -12,8 +12,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { ArrowLeft } from 'lucide-react-native';
 import { useTheme } from '@/src/context/ThemeContext';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { productService } from '@/src/api';
 
 const { width } = Dimensions.get('window');
@@ -24,6 +25,13 @@ export default function SearchScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
+  const { category } = useLocalSearchParams();
+
+  useEffect(() => {
+    if (category) {
+      setSelectedCategory(category as string);
+    }
+  }, [category]);
 
   // Backend data
   const [categories, setCategories] = useState<any[]>([]);
@@ -149,7 +157,10 @@ export default function SearchScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.background, flexDirection: 'row', alignItems: 'center', gap: 12 }]}>
+        <TouchableOpacity onPress={() => router.back()}>
+          <ArrowLeft size={24} color={colors.text} />
+        </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Search</Text>
       </View>
 

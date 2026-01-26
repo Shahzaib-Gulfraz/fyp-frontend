@@ -19,9 +19,16 @@ const getSavedItems = async (req, res) => {
             .populate('variantId')
             .sort('-createdAt');
 
-        res.json({ savedItems });
+        res.json({
+            success: true,
+            data: savedItems
+        });
     } catch (error) {
-        res.status(500).json({ message: 'Server error', error: error.message });
+        res.status(500).json({
+            success: false,
+            message: 'Server error',
+            error: error.message
+        });
     }
 };
 

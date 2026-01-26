@@ -11,11 +11,16 @@ const productSchema = new mongoose.Schema({
     name: {
         type: String,
         required: [true, 'Product name is required'],
-        trim: true
+        trim: true,
+        minlength: [3, 'Product name must be at least 3 characters long'],
+        maxlength: [200, 'Product name cannot exceed 200 characters']
     },
     description: {
         type: String,
-        trim: true
+        trim: true,
+        required: [true, 'Description is required'],
+        minlength: [20, 'Description must be at least 20 characters long'],
+        maxlength: [5000, 'Description cannot exceed 5000 characters']
     },
     category: {
         type: mongoose.Schema.Types.ObjectId,
@@ -31,11 +36,26 @@ const productSchema = new mongoose.Schema({
     price: {
         type: Number,
         required: [true, 'Price is required'],
-        min: [0, 'Price cannot be negative']
+        min: [0.01, 'Price must be greater than 0'],
+        validate: {
+            validator: function(v) {
+                return v > 0;
+            },
+            message: 'Price must be a positive number'
+        }
     },
     compareAtPrice: {
         type: Number,
-        min: [0, 'Compare price cannot be negative']
+        min: [0, 'Compare price cannot be negative'],
+        validate: {
+            validator: function(v) {
+                if (v && v > 0) {
+                    return v >= this.price;
+                }
+                return true;
+            },
+            message: 'Original price must be greater than or equal to selling price'
+        }
     },
     currency: {
         type: String,

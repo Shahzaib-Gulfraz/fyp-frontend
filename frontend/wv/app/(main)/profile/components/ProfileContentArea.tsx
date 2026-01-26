@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, Dimensions } from 'react-native';
 import { Image } from 'expo-image';
-import { ImageIcon, Plus, ThumbsUp, MessageCircle, Bookmark } from 'lucide-react-native';
+import { ImageIcon, Plus, ThumbsUp, MessageCircle, Bookmark, TrendingUp } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 
 const { width } = Dimensions.get("window");
 
@@ -10,10 +11,13 @@ interface ProfileContentAreaProps {
     activeTab: string;
     userPosts: any[];
     hasPosts: boolean;
+    savedItems?: any[];
+    savedLoading?: boolean;
 }
 
-export const ProfileContentArea = ({ theme, activeTab, userPosts, hasPosts }: ProfileContentAreaProps) => {
+export const ProfileContentArea = ({ theme, activeTab, userPosts, hasPosts, savedItems = [], savedLoading = false }: ProfileContentAreaProps) => {
     const styles = getStyles(theme.colors);
+    const router = useRouter();
 
     const renderEmptyPosts = () => (
         <View style={styles.emptyPostsContainer}>
@@ -24,10 +28,6 @@ export const ProfileContentArea = ({ theme, activeTab, userPosts, hasPosts }: Pr
             <Text style={styles.emptySubtitle}>
                 Share your first virtual try-on experience
             </Text>
-            <TouchableOpacity style={styles.createPostButton}>
-                <Plus size={20} color="#FFFFFF" />
-                <Text style={styles.createPostText}>Create First Post</Text>
-            </TouchableOpacity>
         </View>
     );
 
@@ -35,9 +35,12 @@ export const ProfileContentArea = ({ theme, activeTab, userPosts, hasPosts }: Pr
         <FlatList
             data={userPosts}
             numColumns={3}
-            keyExtractor={(item) => item.id.toString()}
+            keyExtractor={(item) => item._id || item.id?.toString()}
             renderItem={({ item }) => (
-                <TouchableOpacity style={styles.postItem}>
+                <TouchableOpacity
+                    style={styles.postItem}
+                    onPress={() => router.push(`/(main)/social/post/${item._id}`)}
+                >
                     <Image
                         source={{ uri: item.image }}
                         style={styles.postImage}
@@ -47,16 +50,56 @@ export const ProfileContentArea = ({ theme, activeTab, userPosts, hasPosts }: Pr
                         <View style={styles.postStats}>
                             <View style={styles.postStat}>
                                 <ThumbsUp size={12} color="#FFFFFF" />
-                                <Text style={styles.postStatText}>{item.likes}</Text>
+                                <Text style={styles.postStatText}>
+                                    {item.likesCount || item.likes?.length || 0}
+                                </Text>
                             </View>
                             <View style={styles.postStat}>
                                 <MessageCircle size={12} color="#FFFFFF" />
-                                <Text style={styles.postStatText}>{item.comments}</Text>
+                                <Text style={styles.postStatText}>
+                                    {item.commentsCount || item.comments?.length || 0}
+                                </Text>
                             </View>
                         </View>
                     </View>
                 </TouchableOpacity>
             )}
+            contentContainerStyle={styles.postsGrid}
+            scrollEnabled={false}
+        />
+    );
+
+    const renderSavedGrid = () => (
+        <FlatList
+            data={savedItems}
+            numColumns={3}
+            keyExtractor={(item) => item._id || item.productId?._id}
+            renderItem={({ item }) => {
+                // Handle image URL - could be string or object
+                const imageUrl = item.productId?.images?.[0]
+                    ? (typeof item.productId.images[0] === 'string'
+                        ? item.productId.images[0]
+                        : item.productId.images[0]?.url)
+                    : (typeof item.productId?.thumbnail === 'string'
+                        ? item.productId.thumbnail
+                        : item.productId?.thumbnail?.url);
+
+                return (
+                    <TouchableOpacity
+                        style={styles.postItem}
+                        onPress={() => router.push(`/buy/${item.productId?._id}`)}
+                    >
+                        <Image
+                            source={{ uri: imageUrl || 'https://via.placeholder.com/150' }}
+                            style={styles.postImage}
+                            contentFit="cover"
+                        />
+                        <View style={styles.savedIcon}>
+                            <Bookmark size={16} color="#00BCD4" fill="#00BCD4" />
+                        </View>
+                    </TouchableOpacity>
+                );
+            }}
             contentContainerStyle={styles.postsGrid}
             scrollEnabled={false}
         />
@@ -76,67 +119,61 @@ export const ProfileContentArea = ({ theme, activeTab, userPosts, hasPosts }: Pr
                     )}
                 </View>
             );
-        case "wardrobe":
-            return (
-                <View style={styles.contentArea}>
-                    <Text style={styles.sectionTitle}>Virtual Wardrobe</Text>
-                    <View style={styles.wardrobeGrid}>
-                        {[1, 2, 3, 4, 5, 6].map((item) => (
-                            <TouchableOpacity key={item} style={styles.wardrobeItem}>
-                                <Image
-                                    source={{
-                                        uri: `https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=300&q=${item}`,
-                                    }}
-                                    style={styles.wardrobeImage}
-                                    contentFit="cover"
-                                />
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                </View>
-            );
+
         case "saved":
             return (
                 <View style={styles.contentArea}>
                     <Text style={styles.sectionTitle}>Saved Items</Text>
-                    <View style={styles.savedGrid}>
-                        {[1, 2, 3, 4, 5, 6].map((item) => (
-                            <TouchableOpacity key={item} style={styles.savedItem}>
-                                <Image
-                                    source={{
-                                        uri: `https://images.unsplash.com/photo-1551028719-00167b16eac5?w=300&q=${item}`,
-                                    }}
-                                    style={styles.savedImage}
-                                    contentFit="cover"
-                                />
-                                <View style={styles.savedIcon}>
-                                    <Bookmark size={20} color="#00BCD4" fill="#00BCD4" />
-                                </View>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
+                    {savedLoading ? (
+                        <View style={{ padding: 40, alignItems: 'center' }}>
+                            <Text style={{ color: theme.colors.textSecondary }}>Loading...</Text>
+                        </View>
+                    ) : savedItems.length > 0 ? (
+                        renderSavedGrid()
+                    ) : (
+                        <View style={styles.emptyPostsContainer}>
+                            <View style={styles.emptyIconContainer}>
+                                <Bookmark size={64} color="#CCCCCC" />
+                            </View>
+                            <Text style={styles.emptyTitle}>No Saved Items</Text>
+                            <Text style={styles.emptySubtitle}>
+                                Your saved products will appear here
+                            </Text>
+                        </View>
+                    )}
                 </View>
             );
         case "activity":
             return (
                 <View style={styles.contentArea}>
                     <Text style={styles.sectionTitle}>Recent Activity</Text>
-                    <View style={styles.activityList}>
-                        {[
-                            { action: "Liked a post", time: "2 hours ago" },
-                            { action: "Followed FashionBrand", time: "1 day ago" },
-                            { action: "Saved an outfit", time: "2 days ago" },
-                            { action: "Created new avatar", time: "1 week ago" },
-                        ].map((item, index) => (
-                            <View key={index} style={styles.activityItem}>
-                                <View style={styles.activityDot} />
-                                <View style={styles.activityContent}>
-                                    <Text style={styles.activityText}>{item.action}</Text>
-                                    <Text style={styles.activityTime}>{item.time}</Text>
+                    {userPosts.length > 0 ? (
+                        <View style={styles.activityList}>
+                            {userPosts.slice(0, 10).map((post: any, index: number) => (
+                                <View key={post._id || index} style={styles.activityItem}>
+                                    <View style={styles.activityDot} />
+                                    <View style={styles.activityContent}>
+                                        <Text style={styles.activityText}>
+                                            Posted "{post.caption?.substring(0, 30) || 'a new photo'}{post.caption?.length > 30 ? '...' : ''}"
+                                        </Text>
+                                        <Text style={styles.activityTime}>
+                                            {new Date(post.createdAt).toLocaleDateString()}
+                                        </Text>
+                                    </View>
                                 </View>
+                            ))}
+                        </View>
+                    ) : (
+                        <View style={styles.emptyPostsContainer}>
+                            <View style={styles.emptyIconContainer}>
+                                <TrendingUp size={64} color="#CCCCCC" />
                             </View>
-                        ))}
-                    </View>
+                            <Text style={styles.emptyTitle}>No Activity Yet</Text>
+                            <Text style={styles.emptySubtitle}>
+                                Your recent activities will appear here
+                            </Text>
+                        </View>
+                    )}
                 </View>
             );
         default:

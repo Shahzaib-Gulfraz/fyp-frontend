@@ -3,7 +3,6 @@ import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'rea
 import { useTheme } from '@/src/context/ThemeContext';
 import { appTheme } from '@/src/theme/appTheme';
 import { Lock, Check } from 'lucide-react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
 
 interface CheckoutButtonProps {
   onPress: () => void;
@@ -22,8 +21,7 @@ const CheckoutButton: React.FC<CheckoutButtonProps> = ({
   const { spacing, radius, fonts } = appTheme.tokens;
 
   return (
-    <Animated.View
-      entering={FadeInDown.duration(300)}
+    <View
       style={[
         styles.container,
         {
@@ -77,7 +75,7 @@ const CheckoutButton: React.FC<CheckoutButtonProps> = ({
           By placing your order, you agree to our Terms of Service
         </Text>
       </View>
-    </Animated.View>
+    </View>
   );
 };
 

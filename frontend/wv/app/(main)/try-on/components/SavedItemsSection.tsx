@@ -3,7 +3,6 @@ import { View, Text, FlatList, Image, TouchableOpacity } from 'react-native';
 import { useTheme } from '@/src/context/ThemeContext';
 import { appTheme } from '@/src/theme/appTheme';
 import { Zap, Star, ChevronRight } from 'lucide-react-native';
-import Animated, { SlideInDown } from 'react-native-reanimated';
 import { ClothingItem } from '../types';
 
 interface SavedItemsSectionProps {
@@ -209,8 +208,7 @@ const SavedItemsSection: React.FC<SavedItemsSectionProps> = ({
   ), [colors, fonts, spacing.xs, items.length, onSeeAll]);
 
   return (
-    <Animated.View
-      entering={SlideInDown.duration(600).delay(400)}
+    <View
       style={{
         paddingHorizontal: spacing.lg,
         marginBottom: spacing.xl,
@@ -229,7 +227,7 @@ const SavedItemsSection: React.FC<SavedItemsSectionProps> = ({
         snapToInterval={168 + spacing.md}
         decelerationRate="fast"
       />
-    </Animated.View>
+    </View>
   );
 };
 

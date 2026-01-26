@@ -16,6 +16,12 @@ export const ProfileInfo = ({ theme, user, userPosts, fadeAnim, scaleAnim }: Pro
     const router = useRouter();
     const styles = getStyles(theme.colors);
 
+    console.log('ProfileInfo - User object:', user);
+    console.log('ProfileInfo - Friends:', user?.friends);
+    console.log('ProfileInfo - Friends length:', user?.friends?.length);
+    console.log('ProfileInfo - Posts:', userPosts);
+    console.log('ProfileInfo - Posts length:', userPosts?.length);
+
     return (
         <View style={styles.profileHeader}>
             <View style={styles.profileInfo}>
@@ -26,7 +32,11 @@ export const ProfileInfo = ({ theme, user, userPosts, fadeAnim, scaleAnim }: Pro
                     ]}
                 >
                     <Image
-                        source={user.profileImage ? { uri: user.profileImage } : { uri: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&q=80" }}
+                        source={{
+                            uri: typeof user.profileImage === 'string'
+                                ? user.profileImage
+                                : user.profileImage?.url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&q=80"
+                        }}
                         style={styles.profileImage}
                         contentFit="cover"
                         transition={300}
@@ -45,12 +55,8 @@ export const ProfileInfo = ({ theme, user, userPosts, fadeAnim, scaleAnim }: Pro
                         <Text style={styles.statLabel}>Posts</Text>
                     </View>
                     <View style={styles.statColumn}>
-                        <Text style={styles.statNumber}>1.2K</Text>
-                        <Text style={styles.statLabel}>Followers</Text>
-                    </View>
-                    <View style={styles.statColumn}>
-                        <Text style={styles.statNumber}>340</Text>
-                        <Text style={styles.statLabel}>Following</Text>
+                        <Text style={styles.statNumber}>{user.friends?.length || 0}</Text>
+                        <Text style={styles.statLabel}>Friends</Text>
                     </View>
                 </View>
             </View>

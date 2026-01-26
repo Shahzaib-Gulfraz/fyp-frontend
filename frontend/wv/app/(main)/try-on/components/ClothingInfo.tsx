@@ -1,7 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
-import Animated, { SlideInRight, FadeIn } from "react-native-reanimated";
-import { Star, Heart} from "lucide-react-native";
+import { Star, Heart } from "lucide-react-native";
 
 import { useTheme } from "@/src/context/ThemeContext";
 import { appTheme } from "@/src/theme/appTheme";
@@ -47,8 +46,7 @@ const ClothingInfo: React.FC<ClothingInfoProps> = ({
   const { spacing, radius, fonts } = appTheme.tokens;
 
   return (
-    <Animated.View
-      entering={SlideInRight.duration(600).delay(200)}
+    <View
       style={[
         styles.container,
         {
@@ -142,8 +140,7 @@ const ClothingInfo: React.FC<ClothingInfoProps> = ({
           )}
 
           {item.discount && (
-            <Animated.View
-              entering={FadeIn}
+            <View
               style={{
                 backgroundColor: colors.error,
                 marginLeft: spacing.sm,
@@ -162,7 +159,7 @@ const ClothingInfo: React.FC<ClothingInfoProps> = ({
               >
                 {item.discount} OFF
               </Text>
-            </Animated.View>
+            </View>
           )}
         </View>
 
@@ -228,133 +225,137 @@ const ClothingInfo: React.FC<ClothingInfoProps> = ({
       )}
 
       {/* SIZE SELECTION */}
-      <View style={{ marginBottom: spacing.xl }}>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.md }}>
+      {item.sizes && item.sizes.length > 0 && (
+        <View style={{ marginBottom: spacing.xl }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.md }}>
+            <Text
+              style={{
+                fontFamily: fonts.semiBold,
+                fontSize: 16,
+                color: colors.text,
+              }}
+            >
+              Select Size
+            </Text>
+            <TouchableOpacity>
+              <Text
+                style={{
+                  fontFamily: fonts.medium,
+                  fontSize: 14,
+                  color: colors.primary,
+                }}
+              >
+                Size Guide
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingRight: spacing.lg }}
+          >
+            {item.sizes.map((size) => {
+              const selected = selectedSize === size;
+              return (
+                <TouchableOpacity
+                  key={size}
+                  onPress={() => onSelectSize(size)}
+                  style={{
+                    backgroundColor: selected ? colors.primary : colors.surface,
+                    borderRadius: radius.sm,
+                    paddingHorizontal: spacing.md,
+                    paddingVertical: spacing.sm,
+                    marginRight: spacing.sm,
+                    borderWidth: 1,
+                    borderColor: selected ? colors.primary : colors.border,
+                    minWidth: 60,
+                    alignItems: "center",
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: selected ? colors.background : colors.text,
+                      fontFamily: selected ? fonts.semiBold : fonts.medium,
+                      fontSize: 14,
+                    }}
+                  >
+                    {size}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
+
+      {/* COLOR SELECTION */}
+      {item.colors && item.colors.length > 0 && (
+        <View>
           <Text
             style={{
               fontFamily: fonts.semiBold,
               fontSize: 16,
+              marginBottom: spacing.md,
               color: colors.text,
             }}
           >
-            Select Size
+            Select Color
           </Text>
-          <TouchableOpacity>
-            <Text
-              style={{
-                fontFamily: fonts.medium,
-                fontSize: 14,
-                color: colors.primary,
-              }}
-            >
-              Size Guide
-            </Text>
-          </TouchableOpacity>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingRight: spacing.lg }}
+          >
+            {item.colors.map((color) => {
+              const selected = selectedColor === color;
+              const displayName = getColorDisplayName(color);
+              const isLightColor = ["white", "yellow", "pink", "multi"].includes(color.toLowerCase());
+
+              return (
+                <TouchableOpacity
+                  key={color}
+                  onPress={() => onSelectColor(color)}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    marginRight: spacing.sm,
+                    paddingHorizontal: spacing.md,
+                    paddingVertical: spacing.sm,
+                    borderRadius: radius.md,
+                    borderWidth: selected ? 2 : 1,
+                    borderColor: selected ? colors.primary : colors.border,
+                    backgroundColor: colors.surface,
+                  }}
+                >
+                  <View
+                    style={{
+                      width: 20,
+                      height: 20,
+                      borderRadius: 10,
+                      backgroundColor: color.toLowerCase(),
+                      borderWidth: isLightColor ? 1 : 0,
+                      borderColor: colors.border,
+                    }}
+                  />
+                  <Text
+                    style={{
+                      marginLeft: spacing.sm,
+                      fontFamily: selected ? fonts.semiBold : fonts.medium,
+                      color: colors.text,
+                      fontSize: 14,
+                    }}
+                  >
+                    {displayName}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
         </View>
-
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingRight: spacing.lg }}
-        >
-          {item.sizes.map((size) => {
-            const selected = selectedSize === size;
-            return (
-              <TouchableOpacity
-                key={size}
-                onPress={() => onSelectSize(size)}
-                style={{
-                  backgroundColor: selected ? colors.primary : colors.surface,
-                  borderRadius: radius.sm,
-                  paddingHorizontal: spacing.md,
-                  paddingVertical: spacing.sm,
-                  marginRight: spacing.sm,
-                  borderWidth: 1,
-                  borderColor: selected ? colors.primary : colors.border,
-                  minWidth: 60,
-                  alignItems: "center",
-                }}
-              >
-                <Text
-                  style={{
-                    color: selected ? colors.background : colors.text,
-                    fontFamily: selected ? fonts.semiBold : fonts.medium,
-                    fontSize: 14,
-                  }}
-                >
-                  {size}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      </View>
-
-      {/* COLOR SELECTION */}
-      <View>
-        <Text
-          style={{
-            fontFamily: fonts.semiBold,
-            fontSize: 16,
-            marginBottom: spacing.md,
-            color: colors.text,
-          }}
-        >
-          Select Color
-        </Text>
-
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingRight: spacing.lg }}
-        >
-          {item.colors.map((color) => {
-            const selected = selectedColor === color;
-            const displayName = getColorDisplayName(color);
-            const isLightColor = ["white", "yellow", "pink", "multi"].includes(color.toLowerCase());
-
-            return (
-              <TouchableOpacity
-                key={color}
-                onPress={() => onSelectColor(color)}
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  marginRight: spacing.sm,
-                  paddingHorizontal: spacing.md,
-                  paddingVertical: spacing.sm,
-                  borderRadius: radius.md,
-                  borderWidth: selected ? 2 : 1,
-                  borderColor: selected ? colors.primary : colors.border,
-                  backgroundColor: colors.surface,
-                }}
-              >
-                <View
-                  style={{
-                    width: 20,
-                    height: 20,
-                    borderRadius: 10,
-                    backgroundColor: color.toLowerCase(),
-                    borderWidth: isLightColor ? 1 : 0,
-                    borderColor: colors.border,
-                  }}
-                />
-                <Text
-                  style={{
-                    marginLeft: spacing.sm,
-                    fontFamily: selected ? fonts.semiBold : fonts.medium,
-                    color: colors.text,
-                    fontSize: 14,
-                  }}
-                >
-                  {displayName}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      </View>
-    </Animated.View>
+      )}
+    </View>
   );
 };
 

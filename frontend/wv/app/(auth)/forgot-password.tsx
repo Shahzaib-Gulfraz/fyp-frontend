@@ -12,6 +12,8 @@ import {
   Dimensions,
   Animated,
   Easing,
+  ScrollView,
+  Alert
 } from "react-native";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
@@ -25,36 +27,53 @@ import {
 } from "@expo-google-fonts/inter";
 import Toast from "react-native-toast-message";
 import { authTheme } from "@/src/theme/authTheme";
+// Import Services
+import authService from "@/src/api/authService";
+import shopService from "@/src/api/shopService";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
+  
+  // State
+  const [loginMode, setLoginMode] = useState<"user" | "shop">("user");
+  const [step, setStep] = useState<1 | 2>(1); // 1 = Email, 2 = Reset Form
+  
+  // Step 1: Email
   const [email, setEmail] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [emailError, setEmailError] = useState("");
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  
+  // Step 2: OTP & New Password
+  const [otp, setOtp] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  
+  // Loading
+  const [isLoading, setIsLoading] = useState(false);
 
+  // Animation
   const shineAnim = useRef(new Animated.Value(-120)).current;
-
-  const [fontsLoaded] = useFonts({
-    Inter_400Regular,
-    Inter_600SemiBold,
-    Inter_700Bold,
-  });
 
   useEffect(() => {
     const loop = () => {
       shineAnim.setValue(-120);
       Animated.timing(shineAnim, {
         toValue: 320,
-        duration: 1500,
+        duration: 2500, // slower shine
         easing: Easing.inOut(Easing.ease),
         useNativeDriver: true,
       }).start(() => setTimeout(loop, 2200));
     };
     loop();
   }, [shineAnim]);
+
+  const [fontsLoaded] = useFonts({
+    Inter_400Regular,
+    Inter_600SemiBold,
+    Inter_700Bold,
+  });
 
   if (!fontsLoaded) {
     return (
@@ -64,269 +83,282 @@ export default function ForgotPasswordScreen() {
     );
   }
 
+  // --- Handlers ---
+
   const validateEmail = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email.trim()) {
-      setEmailError("Email is required");
-      return false;
+        setEmailError("Email is required");
+        return false;
     } else if (!emailRegex.test(email)) {
-      setEmailError("Please enter a valid email");
-      return false;
+        setEmailError("Please enter a valid email");
+        return false;
     }
     setEmailError("");
     return true;
   };
 
-  const handleResetPassword = async () => {
+  // Step 1: Send OTP
+  const handleSendCode = async () => {
     if (!validateEmail()) return;
-
     setIsLoading(true);
+
     try {
-      // Simulate API call
-      console.log("Password reset requested for:", email);
+        if (loginMode === "user") {
+            await authService.forgotPassword(email);
+        } else {
+            await shopService.forgotPassword(email);
+        }
 
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      Toast.show({
-        type: "success",
-        text1: "Email Sent",
-        text2: "Password reset instructions have been sent to your email.",
-      });
-
-      setIsSubmitted(true);
-    } catch {
-      Toast.show({
-        type: "error",
-        text1: "Error",
-        text2: "Failed to send reset email. Please try again.",
-      });
+        Toast.show({
+            type: "success",
+            text1: "Code Sent",
+            text2: `A verification code has been sent to ${email}`,
+        });
+        
+        setStep(2); // Move to next step
+    } catch (e: any) {
+        setEmailError(e.response?.data?.message || e.message || "Failed to send code");
     } finally {
-      setIsLoading(false);
+        setIsLoading(false);
     }
   };
 
-  const handlePreviousStep = () => {
-    router.push("/login");
+  // Step 2: Verify & Reset
+  const handleResetPassword = async () => {
+    if (!otp || otp.length < 6) {
+        Toast.show({ type: "error", text1: "Invalid Code", text2: "Please enter the 6-digit code" });
+        return;
+    }
+    if (!password || password.length < 8) {
+        Toast.show({ type: "error", text1: "Weak Password", text2: "Password must be at least 8 chars" });
+        return;
+    }
+    if (password !== confirmPassword) {
+        Toast.show({ type: "error", text1: "Mismatch", text2: "Passwords do not match" });
+        return;
+    }
+
+    setIsLoading(true);
+    try {
+        const payload = { email, otp, password };
+        
+        if (loginMode === "user") {
+            await authService.resetPassword(payload);
+        } else {
+            await shopService.resetPassword(payload);
+        }
+
+        Toast.show({
+            type: "success",
+            text1: "Success",
+            text2: "Password reset successfully. Please login.",
+        });
+
+        // Redirect to login after slight delay
+        setTimeout(() => {
+            router.replace("/(auth)/login");
+        }, 1500);
+        
+    } catch (e: any) {
+        Toast.show({
+            type: "error",
+            text1: "Reset Failed",
+            text2: e.response?.data?.message || e.message || "Something went wrong",
+        });
+    } finally {
+        setIsLoading(false);
+    }
   };
 
-  const handleResendEmail = () => {
-    handleResetPassword();
-  };
+  // --- Renders ---
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1 }}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={handlePreviousStep}>
-            <Ionicons
-              name="arrow-back"
-              size={24}
-              color={authTheme.colors.textPrimary}
-            />
-          </TouchableOpacity>
+        <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={{ flex: 1 }}
+        >
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+            
+            {/* Header / Nav */}
+            <View style={styles.header}>
+                <TouchableOpacity onPress={() => router.back()}>
+                    <Ionicons name="arrow-back" size={24} color={authTheme.colors.textPrimary} />
+                </TouchableOpacity>
+                <Image
+                    source={require("../../assets/images/logo-light.png")}
+                    style={styles.logo}
+                    contentFit="contain"
+                />
+            </View>
 
-          <View style={{ flex: 1 }} />
-
-          <Image
-            source={require("../../assets/images/logo-light.png")}
-            style={styles.logoRight}
-            contentFit="contain"
-          />
-        </View>
-
-
-        <View style={styles.content}>
-          {!isSubmitted ? (
-            <>
-              {/* Title Section */}
-              <View style={styles.brandContainer}>
+            {/* Title & Branding */}
+            <View style={styles.brandContainer}>
                 <View style={styles.shineWrapper}>
-                  <Text style={styles.appName}>Reset Password</Text>
-                  <Animated.View
-                    pointerEvents="none"
-                    style={[
-                      styles.shineOverlay,
-                      { transform: [{ translateX: shineAnim }] },
-                    ]}
-                  >
-                    <LinearGradient
-                      colors={[
-                        "transparent",
-                        "rgba(255,255,255,0.85)",
-                        "transparent",
-                      ]}
-                      style={styles.shineGradient}
-                    />
-                  </Animated.View>
+                    <Text style={styles.appName}>
+                        {step === 1 ? "Forgot Password" : "Reset Password"}
+                    </Text>
+                    {/* Shine Effect */}
+                    <Animated.View
+                        pointerEvents="none"
+                        style={[
+                            styles.shineOverlay,
+                            { transform: [{ translateX: shineAnim }] },
+                        ]}
+                    >
+                         <LinearGradient
+                            colors={["transparent", "rgba(255,255,255,0.85)", "transparent"]}
+                            style={styles.shineGradient}
+                        />
+                    </Animated.View>
                 </View>
 
                 <Text style={styles.subtitle}>
-                  Enter your email address and we will send you instructions to
-                  reset your password.
+                    {step === 1 
+                        ? "Enter your email to receive a reset code." 
+                        : "Enter the code and your new password."}
                 </Text>
-              </View>
 
-              {/* Form Section */}
-              <View style={styles.formContainer}>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Email Address</Text>
-                  <View
-                    style={[styles.inputBox, emailError && styles.errorBorder]}
-                  >
-                    <Ionicons name="mail-outline" size={20} color="#777" />
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Enter your email"
-                      placeholderTextColor={authTheme.colors.textSecondary}
-                      value={email}
-                      onChangeText={(text) => {
-                        setEmail(text);
-                        setEmailError("");
-                      }}
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      editable={!isLoading}
-                    />
-                  </View>
-                  {emailError ? (
-                    <Text style={styles.error}>{emailError}</Text>
-                  ) : null}
-                </View>
+                {/* Mode Selector (Only in Step 1) */}
+                {step === 1 && (
+                    <View style={styles.modeToggleContainer}>
+                        <TouchableOpacity
+                            onPress={() => setLoginMode("user")}
+                            style={[styles.modeButton, loginMode === "user" && styles.modeButtonActive]}
+                        >
+                            <Ionicons name="person-outline" size={18} color={loginMode === "user" ? "#fff" : "#666"} />
+                            <Text style={[styles.modeButtonText, loginMode === "user" && styles.modeButtonTextActive]}>Customer</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => setLoginMode("shop")}
+                            style={[styles.modeButton, loginMode === "shop" && styles.modeButtonActive]}
+                        >
+                            <Ionicons name="storefront-outline" size={18} color={loginMode === "shop" ? "#fff" : "#666"} />
+                            <Text style={[styles.modeButtonText, loginMode === "shop" && styles.modeButtonTextActive]}>Shop Owner</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
+            </View>
 
-                {/* Reset Button */}
-                <TouchableOpacity
-                  style={[styles.button, isLoading && styles.buttonDisabled]}
-                  onPress={handleResetPassword}
-                  disabled={isLoading}
-                >
-                  <LinearGradient
-                    colors={["#000", "#333"]}
-                    style={styles.buttonInner}
-                  >
-                    {isLoading ? (
-                      <ActivityIndicator
-                        color={authTheme.colors.buttonText}
-                        size="small"
-                      />
-                    ) : (
-                      <>
-                        <Ionicons
-                          name="send-outline"
-                          size={20}
-                          color={authTheme.colors.buttonText}
-                        />
-                        <Text style={styles.buttonText}>Send Reset Link</Text>
-                      </>
-                    )}
-                  </LinearGradient>
-                </TouchableOpacity>
+            <View style={styles.formContainer}>
+                
+                {/* STEP 1: Email Input */}
+                {step === 1 ? (
+                    <View>
+                        <View style={styles.field}>
+                            <Text style={styles.label}>Email Address</Text>
+                            <View style={[styles.inputBox, emailError && styles.errorBorder]}>
+                                <Ionicons name="mail-outline" size={20} color="#777" />
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Enter your email"
+                                    value={email}
+                                    onChangeText={(t) => { setEmail(t); setEmailError(""); }}
+                                    autoCapitalize="none"
+                                    keyboardType="email-address"
+                                />
+                            </View>
+                            {!!emailError && <Text style={styles.error}>{emailError}</Text>}
+                        </View>
 
+                        <TouchableOpacity
+                            style={[styles.button, isLoading && styles.buttonDisabled]}
+                            onPress={handleSendCode}
+                            disabled={isLoading}
+                        >
+                            <LinearGradient colors={["#000", "#333"]} style={styles.buttonInner}>
+                                {isLoading ? (
+                                    <ActivityIndicator color="#fff" size="small" />
+                                ) : (
+                                    <>
+                                        <Text style={styles.buttonText}>Send Code</Text>
+                                        <Ionicons name="arrow-forward" size={20} color="#fff" />
+                                    </>
+                                )}
+                            </LinearGradient>
+                        </TouchableOpacity>
+                    </View>
+                ) : (
+                    /* STEP 2: OTP and Password */
+                    <View>
+                        <View style={styles.field}>
+                            <Text style={styles.label}>Verification Code</Text>
+                            <View style={styles.inputBox}>
+                                <Ionicons name="key-outline" size={20} color="#777" />
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="6-digit code"
+                                    value={otp}
+                                    onChangeText={setOtp}
+                                    keyboardType="number-pad"
+                                    maxLength={6}
+                                />
+                            </View>
+                        </View>
+
+                        <View style={styles.field}>
+                            <Text style={styles.label}>New Password</Text>
+                            <View style={styles.inputBox}>
+                                <Ionicons name="lock-closed-outline" size={20} color="#777" />
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Minimum 8 characters"
+                                    secureTextEntry={!showPassword}
+                                    value={password}
+                                    onChangeText={setPassword}
+                                />
+                                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                                    <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color="#777" />
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                        
+                        <View style={styles.field}>
+                             <Text style={styles.label}>Confirm Password</Text>
+                            <View style={styles.inputBox}>
+                                <Ionicons name="lock-closed-outline" size={20} color="#777" />
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Confirm new password"
+                                    secureTextEntry={!showPassword}
+                                    value={confirmPassword}
+                                    onChangeText={setConfirmPassword}
+                                />
+                            </View>
+                        </View>
+
+                        <TouchableOpacity
+                            style={[styles.button, isLoading && styles.buttonDisabled]}
+                            onPress={handleResetPassword}
+                            disabled={isLoading}
+                        >
+                            <LinearGradient colors={["#000", "#333"]} style={styles.buttonInner}>
+                                {isLoading ? (
+                                    <ActivityIndicator color="#fff" size="small" />
+                                ) : (
+                                    <>
+                                        <Text style={styles.buttonText}>Reset Password</Text>
+                                        <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
+                                    </>
+                                )}
+                            </LinearGradient>
+                        </TouchableOpacity>
+                        
+                        <TouchableOpacity style={styles.resendLink} onPress={() => setStep(1)}>
+                            <Text style={styles.resendText}>Didn't get the code? Try again</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
+                
                 {/* Back to Login */}
-                <TouchableOpacity
-                  style={styles.backToLogin}
-                  onPress={() => router.replace("/(auth)/login")}
-                >
-                  <Ionicons
-                    name="arrow-back"
-                    size={16}
-                    color={authTheme.colors.textSecondary}
-                  />
-                  <Text style={styles.backToLoginText}>Back to Sign In</Text>
+                 <TouchableOpacity style={styles.backToLogin} onPress={() => router.replace("/(auth)/login")}>
+                    <Text style={styles.backToLoginText}>Back to Login</Text>
                 </TouchableOpacity>
-              </View>
-            </>
-          ) : (
-            <>
-              {/* Success State */}
-              <View style={styles.successSection}>
-                <View style={styles.brandContainer}>
-                  <View style={styles.shineWrapper}>
-                    <Text style={styles.appName}>Check Your Email</Text>
-                    <Animated.View
-                      pointerEvents="none"
-                      style={[
-                        styles.shineOverlay,
-                        { transform: [{ translateX: shineAnim }] },
-                      ]}
-                    >
-                      <LinearGradient
-                        colors={[
-                          "transparent",
-                          "rgba(255,255,255,0.85)",
-                          "transparent",
-                        ]}
-                        style={styles.shineGradient}
-                      />
-                    </Animated.View>
-                  </View>
-                </View>
 
-                <View style={styles.successContent}>
-                  <View style={styles.successIcon}>
-                    <Ionicons
-                      name="checkmark-circle"
-                      size={80}
-                      color={authTheme.colors.primary || "#00BCD4"}
-                    />
-                  </View>
-
-                  <Text style={styles.successMessage}>
-                    We have sent password reset instructions to{"\n"}
-                    <Text style={styles.emailHighlight}>{email}</Text>
-                  </Text>
-                  <Text style={styles.instructions}>
-                    Please check your inbox and follow the link to reset your
-                    password. The link will expire in 1 hour.
-                  </Text>
-
-                  {/* Action Buttons */}
-                  <View style={styles.actionButtons}>
-                    <TouchableOpacity
-                      style={styles.resendButton}
-                      onPress={handleResendEmail}
-                      disabled={isLoading}
-                    >
-                      <LinearGradient
-                        colors={["#F8F9FA", "#F8F9FA"]}
-                        style={styles.resendButtonInner}
-                      >
-                        {isLoading ? (
-                          <ActivityIndicator
-                            color={authTheme.colors.textPrimary}
-                            size="small"
-                          />
-                        ) : (
-                          <Text style={styles.resendButtonText}>
-                            Resend Email
-                          </Text>
-                        )}
-                      </LinearGradient>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={styles.backButtonSuccess}
-                      onPress={() => router.replace("/(auth)/login")}
-                    >
-                      <LinearGradient
-                        colors={["#000", "#333"]}
-                        style={styles.buttonInner}
-                      >
-                        <Text style={styles.buttonText}>Back to Sign In</Text>
-                      </LinearGradient>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </View>
-            </>
-          )}
-        </View>
-      </KeyboardAvoidingView>
-      <Toast />
+            </View>
+        </ScrollView>
+        </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -342,23 +374,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: authTheme.colors.background,
   },
+  scrollContent: {
+    flexGrow: 1,
+    padding: 24,
+  },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 20,
+    marginBottom: 20
+  },
+  logo: {
+    width: 32,
+    height: 32,
   },
   logoRight: {
     width: 40,
     height: 40,
     resizeMode: "contain",
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 24,
-    minHeight: SCREEN_HEIGHT * 0.8,
   },
   brandContainer: {
     alignItems: "center",
@@ -370,6 +403,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.6,
     color: authTheme.colors.textPrimary,
     textAlign: "center",
+    marginBottom: 8
   },
   subtitle: {
     marginTop: 6,
@@ -388,8 +422,41 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   shineGradient: { flex: 1, transform: [{ skewX: "-20deg" }] },
+  modeToggleContainer: {
+    flexDirection: "row",
+    backgroundColor: "#F5F5F5",
+    borderRadius: 12,
+    padding: 4,
+    marginTop: 20,
+    width: "100%",
+  },
+  modeButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    borderRadius: 8,
+    gap: 6,
+  },
+  modeButtonActive: {
+    backgroundColor: "#000",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  modeButtonText: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: "#666",
+  },
+  modeButtonTextActive: {
+    color: "#fff",
+  },
   formContainer: { marginTop: 20 },
-  field: { marginBottom: 24 },
+  field: { marginBottom: 20 },
   label: {
     fontFamily: authTheme.fonts.semiBold,
     fontSize: authTheme.fontSizes.label,
@@ -402,7 +469,7 @@ const styles = StyleSheet.create({
     backgroundColor: authTheme.colors.inputBg,
     borderRadius: authTheme.borderRadius,
     paddingHorizontal: 16,
-    height: 56,
+    height: 52,
     borderWidth: 1,
     borderColor: authTheme.colors.inputBorder,
     gap: 10,
@@ -440,73 +507,23 @@ const styles = StyleSheet.create({
     fontFamily: authTheme.fonts.semiBold,
     fontSize: authTheme.fontSizes.button,
   },
+  resendLink: {
+      alignItems: 'center',
+      marginTop: 20
+  },
+  resendText: {
+      color: authTheme.colors.primary,
+      fontFamily: 'Inter_600SemiBold',
+      fontSize: 14
+  },
   backToLogin: {
-    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    padding: 12,
     marginTop: 20,
+    paddingBottom: 20
   },
   backToLoginText: {
     fontSize: authTheme.fontSizes.small || 14,
     fontFamily: authTheme.fonts.regular,
     color: authTheme.colors.textSecondary,
-    marginLeft: 8,
-  },
-  successSection: {
-    flex: 1,
-    alignItems: "center",
-  },
-  successContent: {
-    alignItems: "center",
-    width: "100%",
-  },
-  successIcon: {
-    marginBottom: 32,
-  },
-  successMessage: {
-    fontSize: authTheme.fontSizes.input || 16,
-    fontFamily: authTheme.fonts.regular,
-    color: authTheme.colors.textSecondary,
-    textAlign: "center",
-    marginBottom: 16,
-    lineHeight: 24,
-  },
-  emailHighlight: {
-    fontFamily: authTheme.fonts.semiBold,
-    color: authTheme.colors.textPrimary,
-  },
-  instructions: {
-    fontSize: authTheme.fontSizes.small || 14,
-    fontFamily: authTheme.fonts.regular,
-    color: authTheme.colors.textSecondary,
-    textAlign: "center",
-    lineHeight: 20,
-    marginBottom: 40,
-    paddingHorizontal: 20,
-  },
-  actionButtons: {
-    width: "100%",
-    gap: 16,
-  },
-  resendButton: {
-    borderRadius: authTheme.borderRadius,
-    overflow: "hidden",
-  },
-  resendButtonInner: {
-    paddingVertical: 18,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: authTheme.colors.inputBorder,
-    borderRadius: authTheme.borderRadius,
-  },
-  resendButtonText: {
-    fontSize: authTheme.fontSizes.button,
-    fontFamily: authTheme.fonts.semiBold,
-    color: authTheme.colors.textPrimary,
-  },
-  backButtonSuccess: {
-    borderRadius: authTheme.borderRadius,
-    overflow: "hidden",
   },
 });

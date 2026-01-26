@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ScrollView, FlatList, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { ScrollView, FlatList, View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
@@ -8,15 +8,55 @@ import { Trash2 } from 'lucide-react-native';
 import SavedItemsHeader from './components/SavedItemHeader';
 import SavedItemCard from './components/SavedItemCard';
 import EmptySavedState from './components/EmptySavedState';
-import { MOCK_SAVED_ITEMS } from './constants/mockData';
+import savedItemService from '@/src/api/savedItemService';
 
 const SavedItemsScreen = () => {
   const router = useRouter();
   const { colors, isDark } = useTheme();
-  const [savedItems, setSavedItems] = useState(MOCK_SAVED_ITEMS);
+  const [savedItems, setSavedItems] = useState<any[]>([]);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [isSelecting, setIsSelecting] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'clothing' | 'accessories'>('all');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchSavedItems();
+  }, []);
+
+  const fetchSavedItems = async () => {
+    try {
+      setLoading(true);
+      const response = await savedItemService.getSavedItems();
+      console.log('Saved items response:', response);
+      
+      if (response?.success && response?.data) {
+        // Map backend data to UI format
+        const items = response.data.map((saved: any) => {
+          const product = saved.product || saved.productId;
+          return {
+            id: saved._id,
+            productId: product._id,
+            name: product.name,
+            brand: product.brand || 'WearVirtually',
+            price: product.price,
+            image: product.thumbnail?.url || product.images?.[0]?.url || 'https://placehold.co/400x400',
+            category: product.category?.name?.toLowerCase() === 'accessories' ? 'accessories' : 'clothing',
+            rating: product.stats?.rating || 4.0,
+            description: product.description
+          };
+        });
+        setSavedItems(items);
+      } else {
+        setSavedItems([]);
+      }
+    } catch (error: any) {
+      console.error('Failed to fetch saved items:', error);
+      console.error('Error response:', error.response?.data);
+      setSavedItems([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSelectItem = (id: string) => {
     if (selectedItems.includes(id)) {
@@ -26,10 +66,17 @@ const SavedItemsScreen = () => {
     }
   };
 
-  const handleDeleteSelected = () => {
-    setSavedItems(savedItems.filter(item => !selectedItems.includes(item.id)));
-    setSelectedItems([]);
-    setIsSelecting(false);
+  const handleDeleteSelected = async () => {
+    try {
+      // Delete from backend
+      await Promise.all(selectedItems.map(id => savedItemService.removeSavedItem(id)));
+      // Refresh list
+      await fetchSavedItems();
+      setSelectedItems([]);
+      setIsSelecting(false);
+    } catch (error) {
+      console.error('Failed to delete items:', error);
+    }
   };
 
   const handleClearSelection = () => {
@@ -37,17 +84,28 @@ const SavedItemsScreen = () => {
     setIsSelecting(false);
   };
 
-  const handleDeleteItem = (id: string) => {
-    setSavedItems(savedItems.filter(item => item.id !== id));
+  const handleDeleteItem = async (id: string) => {
+    try {
+      await savedItemService.removeSavedItem(id);
+      await fetchSavedItems();
+    } catch (error) {
+      console.error('Failed to delete item:', error);
+    }
   };
 
-  const handleTryOn = (id: string) => {
-    router.push(`/(main)/try-on/${id}`);
+  const handleTryOn = (productId: string) => {
+    // Navigate to try-on with the product
+    const item = savedItems.find(i => i.productId === productId);
+    if (item) {
+      router.push({
+        pathname: '/(main)/try-on',
+        params: { product: JSON.stringify(item) }
+      });
+    }
   };
 
   const handleShop = (item: any) => {
-    // Navigate to shop or product page
-    router.push(`/(main)/product/${item.id}`);
+    router.push(`/buy/${item.productId}`);
   };
 
   // Filter items based on active tab
@@ -70,7 +128,11 @@ const SavedItemsScreen = () => {
         onDeleteSelected={handleDeleteSelected}
       />
 
-      {savedItems.length === 0 ? (
+      {loading ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : savedItems.length === 0 ? (
         <EmptySavedState onExplore={() => router.push('/(main)/home')} />
       ) : (
         <ScrollView
@@ -80,7 +142,7 @@ const SavedItemsScreen = () => {
         >
           {/* Saved Count & Select Mode Indicator */}
           <View style={styles.topSection}>
-            
+
 
             {isSelecting && (
               <View style={styles.selectIndicator}>

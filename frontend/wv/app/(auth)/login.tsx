@@ -32,9 +32,12 @@ import { authTheme } from "@/src/theme/authTheme";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
+import { useUser } from "@/src/context/UserContext";
+
 export default function LoginScreen() {
   const router = useRouter();
   const { setAuthenticated } = useAuth();
+  const { login: userLogin } = useUser(); // Get login from UserContext
 
   const [loginMode, setLoginMode] = useState<"user" | "shop">("user");
   const [email, setEmail] = useState("");
@@ -96,11 +99,12 @@ export default function LoginScreen() {
     setIsLoading(true);
 
     try {
-      const { authService, shopService } = await import("../../src/api");
+      const { shopService } = await import("../../src/api");
 
       let res;
       if (loginMode === "user") {
-        res = await authService.login(email, password);
+        // Use UserContext login to ensure global state matches backend
+        res = await userLogin(email, password);
       } else {
         res = await shopService.loginShop(email, password);
       }
@@ -114,7 +118,10 @@ export default function LoginScreen() {
           }!`,
       });
 
+      // No need to setAuthenticated manually for user, context does it, but for shop it might be needed?
+      // Or just keep it for safety.
       setAuthenticated(true, loginMode === "user" && res.user?.role === "admin" ? "admin" : loginMode);
+
       await new Promise((r) => setTimeout(r, 300));
 
       if (loginMode === "user") {
@@ -127,7 +134,14 @@ export default function LoginScreen() {
         router.replace("/(main)/shop/dashboard");
       }
     } catch (e: any) {
-      Alert.alert("Login Failed", e.message || "Something went wrong");
+      const msg = e.message ? e.message.toLowerCase() : "";
+      if (msg.includes("email") || msg.includes("user not found")) {
+        setEmailError(e.message);
+      } else if (msg.includes("password")) {
+        setPasswordError(e.message);
+      } else {
+        Alert.alert("Login Failed", e.message || "Something went wrong");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -172,6 +186,8 @@ export default function LoginScreen() {
               >
                 <LinearGradient
                   colors={[
+                    "transparent",
+                    "rgba(255,255,255,0.85)",
                     "transparent",
                     "rgba(255,255,255,0.85)",
                     "transparent",

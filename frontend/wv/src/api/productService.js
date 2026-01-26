@@ -132,7 +132,20 @@ export const productService = {
             }
         }
 
-        const response = await api.post('/products', formData);
+        const config = {
+            headers: {
+                'Content-Type': Platform.OS === 'web' ? 'multipart/form-data' : 'multipart/form-data',
+            },
+            transformRequest: (data, headers) => {
+                if (Platform.OS === 'web') {
+                    // On web, let the browser set the Content-Type with boundary
+                    delete headers['Content-Type'];
+                }
+                return data;
+            },
+        };
+
+        const response = await api.post('/products', formData, config);
         return response.data;
     },
 

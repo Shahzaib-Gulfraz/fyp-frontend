@@ -1,5 +1,7 @@
 const Review = require('../models/Review');
 const Order = require('../models/Order');
+const Product = require('../models/Product');
+const Shop = require('../models/Shop');
 
 // @desc    Create a new review
 // @route   POST /api/reviews
@@ -29,6 +31,12 @@ exports.createReview = async (req, res) => {
             return res.status(400).json({ message: 'Product not found in this order' });
         }
 
+        // Find product to get shopId
+        const product = await Product.findById(productId);
+        if (!product) {
+            return res.status(404).json({ message: 'Product not found' });
+        }
+
         // Check if review already exists
         const existingReview = await Review.findOne({ userId: req.user._id, productId, orderId });
         if (existingReview) {
@@ -39,6 +47,7 @@ exports.createReview = async (req, res) => {
         const review = await Review.create({
             userId: req.user._id,
             productId,
+            shopId: product.shopId,
             orderId,
             rating,
             title,
@@ -47,6 +56,24 @@ exports.createReview = async (req, res) => {
         });
 
         await review.populate('userId', 'fullName');
+
+        // Update Shop Stats (Rating & Review Count)
+        const stats = await Review.aggregate([
+            { $match: { shopId: product.shopId } },
+            { $group: { _id: null, avgRating: { $avg: '$rating' }, numReviews: { $sum: 1 } } }
+        ]);
+
+        if (stats.length > 0) {
+            await Shop.findByIdAndUpdate(product.shopId, {
+                'stats.rating': stats[0].avgRating,
+                'stats.reviewsCount': stats[0].numReviews
+            });
+        } else {
+            await Shop.findByIdAndUpdate(product.shopId, {
+                'stats.rating': rating,
+                'stats.reviewsCount': 1
+            });
+        }
 
         res.status(201).json({
             success: true,

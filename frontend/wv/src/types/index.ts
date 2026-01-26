@@ -23,6 +23,7 @@ export interface ClothingItem {
     reviews: number;
     image: string;
     category: string;
+    subcategory?: string;
     sizes: string[];
     colors: string[];
     isLiked: boolean;

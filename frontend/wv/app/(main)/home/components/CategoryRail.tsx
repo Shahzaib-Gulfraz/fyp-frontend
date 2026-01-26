@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useTheme } from '@/src/context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { productService } from '@/src/api';
@@ -7,6 +8,7 @@ import { productService } from '@/src/api';
 const COLORS = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEEAD', '#FFD93D', '#6C5CE7', '#A8E6CF'];
 
 export const CategoryRail = () => {
+    const router = useRouter();
     const { colors } = useTheme();
     const [categories, setCategories] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -53,7 +55,7 @@ export const CategoryRail = () => {
         <View style={styles.container}>
             <View style={styles.header}>
                 <Text style={[styles.title, { color: colors.text }]}>Categories</Text>
-                <TouchableOpacity>
+                <TouchableOpacity onPress={() => router.push('/(main)/search')}>
                     <Text style={[styles.seeAll, { color: colors.primary }]}>See All</Text>
                 </TouchableOpacity>
             </View>
@@ -66,7 +68,11 @@ export const CategoryRail = () => {
                 {categories.map((cat, index) => {
                     const color = COLORS[index % COLORS.length];
                     return (
-                        <TouchableOpacity key={cat._id || index} style={styles.itemContainer}>
+                        <TouchableOpacity
+                            key={cat._id || index}
+                            style={styles.itemContainer}
+                            onPress={() => router.push({ pathname: '/(main)/search', params: { category: cat._id } })}
+                        >
                             <View style={[styles.iconContainer, { backgroundColor: color + '20' }]}>
                                 {renderIcon(cat.icon, color)}
                             </View>

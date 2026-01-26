@@ -5,6 +5,7 @@ import { StatusBar } from "expo-status-bar";
 import { Grid, ShoppingBag, Bookmark, TrendingUp } from "lucide-react-native";
 import { useTheme } from "@/src/context/ThemeContext";
 import { useUser } from "@/src/context/UserContext";
+import postService from "@/src/api/postService";
 import { ProfileHeader } from "./components/ProfileHeader";
 import { ProfileInfo } from "./components/ProfileInfo";
 import { ActionButtons } from "./components/ActionButtons";
@@ -57,7 +58,13 @@ export default function ProfileScreen() {
   const styles = getStyles(theme.colors);
 
   const [activeTab, setActiveTab] = useState("posts");
-  const [hasPosts] = useState(userPosts.length > 0);
+  const [actualUserPosts, setActualUserPosts] = useState([]);
+  const [postsLoading, setPostsLoading] = useState(true);
+  const [hasPosts, setHasPosts] = useState(false);
+
+  // Saved items state
+  const [savedItems, setSavedItems] = useState([]);
+  const [savedLoading, setSavedLoading] = useState(false);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
@@ -77,11 +84,68 @@ export default function ProfileScreen() {
         useNativeDriver: true,
       }),
     ]).start();
-  }, [fadeAnim, refreshProfile, scaleAnim]);
+  }, []); // Empty dependency array - run only once on mount
+
+  // Fetch user posts
+  useEffect(() => {
+    const fetchUserPosts = async () => {
+      if (!user?.id) {
+        console.log('No user ID found:', user);
+        return;
+      }
+
+      try {
+        setPostsLoading(true);
+        console.log('Fetching posts for user:', user.id);
+        const response = await postService.getUserPosts(user.id);
+        console.log('Posts response:', response);
+        console.log('Posts array:', response.data?.posts);
+        setActualUserPosts(response.data?.posts || []);
+        setHasPosts((response.data?.posts || []).length > 0);
+      } catch (error) {
+        console.error('Failed to fetch user posts:', error);
+        setActualUserPosts([]);
+        setHasPosts(false);
+      } finally {
+        setPostsLoading(false);
+      }
+    };
+
+    fetchUserPosts();
+  }, [user?.id]);
+
+  // Fetch saved items when tab changes to saved
+  useEffect(() => {
+    const fetchSavedItems = async () => {
+      if (!user?.id || activeTab !== 'saved') {
+        console.log('Skipping saved items fetch. User ID:', user?.id, 'Active tab:', activeTab);
+        return;
+      }
+
+      try {
+        setSavedLoading(true);
+        console.log('🔍 Fetching saved items for user:', user.id);
+        const savedItemService = require('@/src/api/savedItemService').default;
+        const response = await savedItemService.getSavedItems();
+        console.log('📦 Saved items full response:', response);
+        console.log('📦 Response.data:', response.data);
+        console.log('📦 Response.data.data:', response.data?.data);
+        console.log('📦 Saved items count:', response.data?.data?.length || 0);
+        // Backend returns data in response.data.data, not response.data.savedItems
+        setSavedItems(response.data?.data || []);
+      } catch (error) {
+        console.error('❌ Failed to fetch saved items:', error);
+        setSavedItems([]);
+      } finally {
+        setSavedLoading(false);
+      }
+    };
+
+    fetchSavedItems();
+  }, [user?.id, activeTab]);
 
   const tabs = [
     { id: "posts", label: "Posts", icon: <Grid size={20} color={activeTab === 'posts' ? '#00BCD4' : '#999'} /> },
-    { id: "wardrobe", label: "Wardrobe", icon: <ShoppingBag size={20} color={activeTab === 'wardrobe' ? '#00BCD4' : '#999'} /> },
     { id: "saved", label: "Saved", icon: <Bookmark size={20} color={activeTab === 'saved' ? '#00BCD4' : '#999'} /> },
     { id: "activity", label: "Activity", icon: <TrendingUp size={20} color={activeTab === 'activity' ? '#00BCD4' : '#999'} /> },
   ];
@@ -117,7 +181,7 @@ export default function ProfileScreen() {
         <ProfileInfo
           theme={theme}
           user={user}
-          userPosts={userPosts}
+          userPosts={actualUserPosts}
           fadeAnim={fadeAnim}
           scaleAnim={scaleAnim}
         />
@@ -131,12 +195,20 @@ export default function ProfileScreen() {
           onTabChange={setActiveTab}
         />
 
-        <ProfileContentArea
-          theme={theme}
-          activeTab={activeTab}
-          userPosts={userPosts}
-          hasPosts={hasPosts}
-        />
+        {postsLoading ? (
+          <View style={{ padding: 40, alignItems: 'center' }}>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+          </View>
+        ) : (
+          <ProfileContentArea
+            theme={theme}
+            activeTab={activeTab}
+            userPosts={actualUserPosts}
+            hasPosts={hasPosts}
+            savedItems={savedItems}
+            savedLoading={savedLoading}
+          />
+        )}
       </ScrollView>
     </SafeAreaView>
   );

@@ -16,6 +16,8 @@ import {
   UserCircle,
   LayoutDashboard,
   Store,
+  Newspaper,
+  Users,
 } from "lucide-react-native";
 import { useRef } from "react";
 import { useTheme } from "@/src/context/ThemeContext";
@@ -32,14 +34,15 @@ export default function MainLayout() {
   const isShopOwner = user?.role === "shop_owner";
 
   const scaleAnimations = useRef(
-    Array(5)
+    Array(6)
       .fill(0)
       .map(() => new Animated.Value(1))
   ).current;
 
   const userFooterTabs = [
     { id: "home", icon: HomeIcon, route: "/home" },
-    { id: "search", icon: Search, route: "/search" },
+    { id: "feed", icon: Newspaper, route: "/social/feed" },
+    { id: "friends", icon: Users, route: "/friends" },
     { id: "try-on", icon: Camera, route: "/try-on" },
     { id: "chats", icon: MessageCircle, route: "/chats" },
     { id: "profile", icon: UserCircle, route: "/profile" },
@@ -67,6 +70,8 @@ export default function MainLayout() {
     }
 
     if (pathname.includes("/home")) return "home";
+    if (pathname.includes("/social/feed")) return "feed";
+    if (pathname.includes("/friends")) return "friends";
     if (pathname.includes("/search")) return "search";
     if (pathname.includes("/try-on")) return "try-on";
     if (pathname.includes("/chats")) return "chats";

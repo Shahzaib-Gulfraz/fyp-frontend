@@ -8,13 +8,16 @@ import { ThemeProvider as NavigationThemeProvider } from "@react-navigation/nati
 import { ThemeProvider, useTheme } from "@/src/context/ThemeContext";
 import { AuthProvider, useAuth } from "@/src/context/AuthContext";
 import { UserProvider } from "@/src/context/UserContext";
+import { SocketProvider } from "@/src/context/SocketContext";
 
 export default function RootLayout() {
   return (
     <ThemeProvider>
       <AuthProvider>
         <UserProvider>
-          <AppProviders />
+          <SocketProvider>
+            <AppProviders />
+          </SocketProvider>
         </UserProvider>
       </AuthProvider>
     </ThemeProvider>
@@ -39,16 +42,20 @@ function RootLayoutNav() {
     if (!isAuthenticated && inMainGroup) {
       console.log('🚫 RootLayout: Unauthenticated in main group, redirecting to login');
       router.replace("/(auth)/login");
-    } else if (isAuthenticated && inAuthGroup) {
+    } 
+    /* 
+    // TEMPORARY: Allow access to login page even if authenticated
+    else if (isAuthenticated && inAuthGroup) {
       console.log('✅ RootLayout: Authenticated in auth group, redirecting to dashboard');
       if (userType === "admin") {
         router.replace("/(admin)/dashboard");
       } else if (userType === "shop") {
-        router.replace("/(main)/shop/dashboard");
+        router.replace("/seller/dashboard");
       } else {
         router.replace("/(main)/home");
       }
-    }
+    } 
+    */
   }, [isAuthenticated, userType, isLoading, segments]);
 
   if (isLoading) {

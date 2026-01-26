@@ -46,6 +46,8 @@ const shopSchema = new mongoose.Schema({
         minlength: [8, 'Password must be at least 8 characters'],
         select: false
     },
+    resetPasswordToken: String,
+    resetPasswordExpire: Date,
     // SEO and Slugs
     seo: {
         slug: {
@@ -146,6 +148,10 @@ const shopSchema = new mongoose.Schema({
             type: Number,
             default: 0
         }
+    },
+    followersCount: {
+        type: Number,
+        default: 0
     }
 }, {
     timestamps: true

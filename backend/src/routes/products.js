@@ -5,14 +5,24 @@ const {
     getProduct,
     createProduct,
     updateProduct,
-    deleteProduct
+    deleteProduct,
+    uploadProductImage
 } = require('../controllers/productController');
-const { shopProtect } = require('../middleware/auth');
-const { uploadProductImages, handleMulterError } = require('../middleware/upload');
+const { shopProtect, protect } = require('../middleware/auth');
+const { uploadProductImages, handleMulterError, uploadSingle } = require('../middleware/upload');
 
 // Public routes
 router.get('/', getProducts);
 router.get('/:id', getProduct);
+
+// Upload route (User accessible for Try-On)
+router.post(
+    '/upload-image',
+    protect,
+    uploadSingle,
+    handleMulterError,
+    uploadProductImage
+);
 
 // Protected routes (Shop only)
 router.post(

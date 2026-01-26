@@ -6,4 +6,5 @@ export { default as orderService } from './orderService';
 export { default as savedItemService } from './savedItemService';
 export { default as adminService } from './adminService';
 export { default as bannerService } from './bannerService';
+export { default as categoryService } from './categoryService';
 export { default as api, API_BASE_URL } from './config';

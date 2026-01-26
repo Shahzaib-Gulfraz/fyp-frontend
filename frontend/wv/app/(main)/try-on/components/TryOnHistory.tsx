@@ -2,8 +2,7 @@ import React from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTheme } from '@/src/context/ThemeContext';
 import { Chip } from 'react-native-paper';
-import { RotateCw, ChevronRight, Calendar, Tag } from 'lucide-react-native';
-import Animated, { SlideInRight, FadeIn } from 'react-native-reanimated';
+import { RotateCw, ChevronRight, Calendar, Tag, Camera } from 'lucide-react-native';
 import { TryOnHistoryItem } from '../types';
 import { appTheme } from '@/src/theme/appTheme';
 
@@ -13,13 +12,18 @@ interface TryOnHistoryProps {
   onItemPress?: (item: TryOnHistoryItem) => void;
 }
 
-const TryOnHistory: React.FC<TryOnHistoryProps> = ({ 
-  items, 
-  onTryAgain, 
-  onItemPress 
+const TryOnHistory: React.FC<TryOnHistoryProps> = ({
+  items,
+  onTryAgain,
+  onItemPress
 }) => {
   const { colors } = useTheme();
   const { spacing, radius, fonts } = appTheme.tokens;
+
+  // Don't render if no items
+  if (!items || items.length === 0) {
+    return null;
+  }
 
   const getGradientBackground = () => {
     return {
@@ -30,8 +34,7 @@ const TryOnHistory: React.FC<TryOnHistoryProps> = ({
   };
 
   return (
-    <Animated.View
-      entering={SlideInRight.duration(600).delay(600)}
+    <View
       style={[
         styles.container,
         getGradientBackground(),
@@ -41,7 +44,7 @@ const TryOnHistory: React.FC<TryOnHistoryProps> = ({
       <View style={[styles.header, { paddingHorizontal: spacing.lg }]}>
         <Text style={[
           styles.title,
-          { 
+          {
             color: colors.text,
             fontFamily: fonts.semiBold,
           }
@@ -50,7 +53,7 @@ const TryOnHistory: React.FC<TryOnHistoryProps> = ({
         </Text>
         <Text style={[
           styles.subtitle,
-          { 
+          {
             color: colors.textSecondary,
             fontFamily: fonts.regular,
           }
@@ -70,7 +73,7 @@ const TryOnHistory: React.FC<TryOnHistoryProps> = ({
               onPress={() => onItemPress?.(item)}
               style={[
                 styles.card,
-                { 
+                {
                   backgroundColor: colors.card,
                   borderRadius: radius.lg,
                   borderColor: colors.divider,
@@ -95,12 +98,12 @@ const TryOnHistory: React.FC<TryOnHistoryProps> = ({
                     { backgroundColor: colors.primary + '10' }
                   ]} />
                 </View>
-                
+
                 <View style={styles.details}>
                   <View style={styles.nameRow}>
                     <Text style={[
                       styles.name,
-                      { 
+                      {
                         color: colors.text,
                         fontFamily: fonts.semiBold,
                       }
@@ -108,20 +111,20 @@ const TryOnHistory: React.FC<TryOnHistoryProps> = ({
                       {item.name}
                     </Text>
                     {onItemPress && (
-                      <ChevronRight 
-                        size={16} 
+                      <ChevronRight
+                        size={16}
                         color={colors.textSecondary}
                         style={styles.chevron}
                       />
                     )}
                   </View>
-                  
+
                   <View style={styles.metaRow}>
                     <View style={styles.metaItem}>
                       <Tag size={12} color={colors.textSecondary} />
                       <Text style={[
                         styles.brand,
-                        { 
+                        {
                           color: colors.textSecondary,
                           fontFamily: fonts.medium,
                         }
@@ -129,12 +132,12 @@ const TryOnHistory: React.FC<TryOnHistoryProps> = ({
                         {item.brand}
                       </Text>
                     </View>
-                    
+
                     <View style={styles.metaItem}>
                       <Calendar size={12} color={colors.textSecondary} />
                       <Text style={[
                         styles.date,
-                        { 
+                        {
                           color: colors.textSecondary,
                           fontFamily: fonts.regular,
                         }
@@ -143,58 +146,58 @@ const TryOnHistory: React.FC<TryOnHistoryProps> = ({
                       </Text>
                     </View>
                   </View>
-                  
+
                   <View style={styles.priceRow}>
                     <Text style={[
                       styles.price,
-                      { 
+                      {
                         color: colors.text,
                         fontFamily: fonts.bold,
                       }
                     ]}>
                       {item.price}
                     </Text>
-                    
+
                     <TouchableOpacity
                       onPress={() => onTryAgain(item)}
                       style={[
                         styles.tryAgainButton,
-                        { 
+                        {
                           backgroundColor: colors.primary + '10',
                           borderColor: colors.primary,
                           borderRadius: radius.full,
                         }
                       ]}
                     >
-                      <RotateCw 
-                        size={14} 
-                        color={colors.primary} 
+                      <Camera
+                        size={14}
+                        color={colors.primary}
                         style={styles.tryAgainIcon}
                       />
                       <Text style={[
                         styles.tryAgainText,
-                        { 
+                        {
                           color: colors.primary,
                           fontFamily: fonts.medium,
                         }
                       ]}>
-                        Try Again
+                        Post
                       </Text>
                     </TouchableOpacity>
                   </View>
                 </View>
               </View>
             </TouchableOpacity>
-          </Animated.View>
+          </View>
         ))}
       </View>
-    </Animated.View>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    // Removed flex: 1 to prevent empty space
   },
   header: {
     flexDirection: 'row',

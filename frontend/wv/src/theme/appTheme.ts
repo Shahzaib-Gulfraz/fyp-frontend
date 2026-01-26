@@ -20,7 +20,8 @@ export interface AppThemeColors {
   success: string;
   onPrimary: string;
   surfaceVariant: string;
-   warning: string;   // ✅ ADD THIS
+  warning: string;
+  disabled: string;
 }
 
 export interface AppThemeGradients {
@@ -64,6 +65,7 @@ export const appTheme: AppTheme = {
       onPrimary: "#ffffff",
       surfaceVariant: "#f0f0f0",
       warning: "#FF9800",
+      disabled: "#BDBDBD",
 
     },
     gradients: {
@@ -88,6 +90,7 @@ export const appTheme: AppTheme = {
       onPrimary: "#ffffff",
       surfaceVariant: "#2c2c2c",
       warning: "#FF9800",
+      disabled: "#555555",
 
     },
     gradients: {

@@ -73,8 +73,13 @@ const getProduct = async (req, res) => {
         }
 
         // Increment view count
-        product.stats.viewsCount += 1;
-        await product.save();
+        try {
+            await Product.findByIdAndUpdate(req.params.id, { 
+                $inc: { 'stats.viewsCount': 1 } 
+            });
+        } catch (err) {
+            console.log('Error updating view count:', err);
+        }
 
         // Get variants
         const variants = await ProductVariant.find({ productId: product._id, isActive: true });
@@ -104,6 +109,49 @@ const createProduct = async (req, res) => {
             careInstructions, colors, sizes, tags,
             specifications, tryon, isFeatured
         } = req.body;
+
+        // Input Validation
+        if (!name || name.trim().length < 3) {
+            return res.status(400).json({
+                message: 'Validation Error',
+                error: 'Product name must be at least 3 characters long'
+            });
+        }
+
+        if (!category) {
+            return res.status(400).json({
+                message: 'Validation Error',
+                error: 'Category is required'
+            });
+        }
+
+        if (!price || isNaN(Number(price)) || Number(price) <= 0) {
+            return res.status(400).json({
+                message: 'Validation Error',
+                error: 'Price must be a positive number greater than 0'
+            });
+        }
+
+        if (compareAtPrice && (isNaN(Number(compareAtPrice)) || Number(compareAtPrice) < 0)) {
+            return res.status(400).json({
+                message: 'Validation Error',
+                error: 'Original price must be a non-negative number'
+            });
+        }
+
+        if (compareAtPrice && Number(compareAtPrice) > 0 && Number(compareAtPrice) < Number(price)) {
+            return res.status(400).json({
+                message: 'Validation Error',
+                error: 'Original price must be greater than or equal to the selling price'
+            });
+        }
+
+        if (stockQuantity && (isNaN(Number(stockQuantity)) || Number(stockQuantity) < 0)) {
+            return res.status(400).json({
+                message: 'Validation Error',
+                error: 'Stock quantity must be a non-negative number'
+            });
+        }
 
         const productData = {
             shopId: req.shop._id,
@@ -337,10 +385,39 @@ const deleteProduct = async (req, res) => {
     }
 };
 
+/**
+ * @desc    Upload product image (for Try-On or general use)
+ * @route   POST /api/products/upload-image
+ * @access  Private
+ */
+const uploadProductImage = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ message: 'No image file provided' });
+        }
+
+        const b64 = Buffer.from(req.file.buffer).toString('base64');
+        const dataURI = `data:${req.file.mimetype};base64,${b64}`;
+
+        // Upload to a specific 'try-on' folder or general 'products'
+        const result = await uploadImage(dataURI, 'products/try-on-uploads');
+
+        res.json({
+            success: true,
+            imageUrl: result.url,
+            publicId: result.publicId
+        });
+    } catch (error) {
+        console.error('Upload image error:', error);
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
 module.exports = {
     getProducts,
     getProduct,
     createProduct,
     updateProduct,
-    deleteProduct
+    deleteProduct,
+    uploadProductImage
 };

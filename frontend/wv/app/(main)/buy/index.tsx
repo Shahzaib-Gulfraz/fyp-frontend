@@ -97,11 +97,11 @@ const BuyNowScreen = () => {
   };
 
   const orderSummary = {
-    subtotal: parseFloat(item.price.replace('$', '')),
+    subtotal: typeof item.price === 'number' ? item.price : parseFloat(String(item.price).replace('$', '')),
     shipping: 5.99,
     tax: 2.50,
     discount: 10.00,
-    total: parseFloat(item.price.replace('$', '')) + 5.99 + 2.50 - 10.00,
+    total: (typeof item.price === 'number' ? item.price : parseFloat(String(item.price).replace('$', ''))) + 5.99 + 2.50 - 10.00,
   };
 
   return (
