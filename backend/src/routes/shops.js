@@ -25,6 +25,12 @@ router.post('/register', uploadShopImages, handleMulterError, registerShop);
 router.post('/login', loginShop);
 router.post('/forgot-password', forgotPasswordShop);
 router.post('/reset-password', resetPasswordShop);
+
+// Protected routes (Shop only) - MUST come before /:id routes
+router.get('/my/profile', shopProtect, getMyShop);
+router.get('/my/stats', shopProtect, getShopStats);
+
+// Parameterized routes (after specific routes)
 router.get('/:id', getShop);
 router.get('/:id/products', getShopProducts);
 router.get('/:id/reviews', getShopReviews);
@@ -34,9 +40,7 @@ router.post('/:id/follow', protect, followShop);
 router.delete('/:id/follow', protect, unfollowShop);
 router.get('/:id/is-following', protect, checkFollowStatus);
 
-// Protected routes (Shop only)
-router.get('/my/profile', shopProtect, getMyShop);
-router.get('/my/stats', shopProtect, getShopStats);
+// Protected parameterized routes
 router.put('/:id', shopProtect, isSelfShop, uploadShopImages, handleMulterError, updateShop);
 
 module.exports = router;

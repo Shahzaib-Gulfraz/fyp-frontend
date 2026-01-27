@@ -30,6 +30,7 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({ visible, onDismis
     const [icon, setIcon] = useState('📦');
     const [description, setDescription] = useState('');
     const [type, setType] = useState('other');
+    const [isTryOnEnabled, setIsTryOnEnabled] = useState(false);
 
     // Attributes
     const [attributes, setAttributes] = useState<Attribute[]>([]);
@@ -50,6 +51,7 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({ visible, onDismis
             setIcon(category.icon || '📦');
             setDescription(category.description || '');
             setType(category.type || 'other');
+            setIsTryOnEnabled(category.isTryOnEnabled || false);
             setAttributes(category.attributes || []);
         } else {
             // Reset for create mode
@@ -57,6 +59,7 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({ visible, onDismis
             setIcon('📦');
             setDescription('');
             setType('clothing'); // Default
+            setIsTryOnEnabled(false);
             setAttributes([]);
         }
     }, [category, visible]);
@@ -72,7 +75,8 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({ visible, onDismis
             icon,
             description,
             type,
-            attributes
+            attributes,
+            isTryOnEnabled
         };
 
         try {
@@ -185,8 +189,13 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({ visible, onDismis
                         value={type}
                         onValueChange={setType}
                         buttons={typeOptions}
-                        style={{ marginTop: 5, marginBottom: 20 }}
+                        style={{ marginTop: 5, marginBottom: 10 }}
                     />
+
+                    <View style={[styles.row, { justifyContent: 'space-between', marginBottom: 20 }]}>
+                        <Text style={{ fontSize: 16, color: colors.text }}>Enable Virtual Try-On?</Text>
+                        <Switch value={isTryOnEnabled} onValueChange={setIsTryOnEnabled} />
+                    </View>
 
                     {/* Dynamic Attributes Section */}
                     <View style={[styles.divider, { backgroundColor: colors.border }]} />

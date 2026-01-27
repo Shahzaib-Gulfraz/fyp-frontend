@@ -14,6 +14,7 @@ import {
   Dimensions,
   Animated,
   Easing,
+  Modal,
 } from "react-native";
 import { useAuth } from "@/src/context/AuthContext";
 import { Image } from "expo-image";
@@ -46,6 +47,10 @@ export default function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  
+  // Status Modal State
+  const [statusModalVisible, setStatusModalVisible] = useState(false);
+  const [statusData, setStatusData] = useState<{ type: 'pending' | 'blocked', message: string }>({ type: 'pending', message: '' });
 
   const shineAnim = useRef(new Animated.Value(-120)).current;
 
@@ -107,6 +112,26 @@ export default function LoginScreen() {
         res = await userLogin(email, password);
       } else {
         res = await shopService.loginShop(email, password);
+        
+        // Check shop status before proceeding
+        if (res.shop) {
+            if (!res.shop.isVerified) {
+                setStatusData({
+                    type: 'pending',
+                    message: "Your shop application is currently under review by our admin team. You will be able to access your dashboard once verified."
+                });
+                setStatusModalVisible(true);
+                return;
+            }
+            if (!res.shop.isActive) {
+                setStatusData({
+                    type: 'blocked',
+                    message: "Your shop account has been suspended due to policy violations. Please contact support for more information."
+                });
+                setStatusModalVisible(true);
+                return;
+            }
+        }
       }
 
       Toast.show({
@@ -134,13 +159,36 @@ export default function LoginScreen() {
         router.replace("/seller/dashboard");
       }
     } catch (e: any) {
+      console.log('Login Error Object:', e);
       const msg = e.message ? e.message.toLowerCase() : "";
+      
+      // Check for blocked shop error (typically 401)
+      // We check via the error message or response data if available
+      const responseData = e.response?.data || {};
+      const serverMsg = responseData.message ? responseData.message.toLowerCase() : "";
+
+      if (msg.includes("deactivated") || serverMsg.includes("deactivated") || msg.includes("blocked") || serverMsg.includes("blocked")) {
+          setStatusData({
+              type: 'blocked',
+              message: "Your shop account has been suspended due to policy violations. Please contact support for more information."
+          });
+          setStatusModalVisible(true);
+          return; // Stop execution
+      }
+
       if (msg.includes("email") || msg.includes("user not found")) {
-        setEmailError(e.message);
+        // Removed Toast, inline error is sufficient
+        setEmailError("Email not found"); 
       } else if (msg.includes("password")) {
-        setPasswordError(e.message);
+        // Removed Toast, inline error is sufficient
+        setPasswordError("Incorrect password");
       } else {
-        Alert.alert("Login Failed", e.message || "Something went wrong");
+        Toast.show({
+            type: "error",
+            text1: "Login Failed",
+            text2: e.message || "An error occurred during login.",
+            visibilityTime: 4000,
+        });
       }
     } finally {
       setIsLoading(false);
@@ -329,6 +377,45 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+      
+      {/* Status Modal */}
+      <Modal
+        visible={statusModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setStatusModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+                <View style={[
+                    styles.iconCircle, 
+                    { backgroundColor: statusData.type === 'pending' ? '#FFF3E0' : '#FFEBEE' }
+                ]}>
+                    <Ionicons 
+                        name={statusData.type === 'pending' ? "time-outline" : "alert-circle-outline"} 
+                        size={40} 
+                        color={statusData.type === 'pending' ? '#EF6C00' : '#D32F2F'} 
+                    />
+                </View>
+                
+                <Text style={styles.modalTitle}>
+                    {statusData.type === 'pending' ? 'Verification Pending' : 'Account Suspended'}
+                </Text>
+                
+                <Text style={styles.modalMessage}>
+                    {statusData.message}
+                </Text>
+                
+                <TouchableOpacity 
+                    style={styles.modalButton}
+                    onPress={() => setStatusModalVisible(false)}
+                >
+                    <Text style={styles.modalButtonText}>I Understand</Text>
+                </TouchableOpacity>
+            </View>
+        </View>
+      </Modal>
+      
       <Toast />
     </SafeAreaView>
   );
@@ -336,6 +423,64 @@ export default function LoginScreen() {
 
 /* ---------------- Styles ---------------- */
 const styles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 340,
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  iconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 10,
+    textAlign: 'center',
+    fontFamily: authTheme.fonts.bold,
+  },
+  modalMessage: {
+    fontSize: 15,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 22,
+    fontFamily: authTheme.fonts.regular,
+  },
+  modalButton: {
+    backgroundColor: '#000',
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 10,
+    width: '100%',
+  },
+  modalButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+    fontFamily: authTheme.fonts.semiBold,
+  },
   container: {
     flex: 1,
     backgroundColor: authTheme.colors.background,

@@ -120,7 +120,7 @@ const RecentOrderCard: React.FC<RecentOrderCardProps> = ({
           {date}
         </Text>
         <Text style={[styles.actionText, { color: colors.primary, fontFamily: fonts.medium }]}>
-          View Details ›
+          View Details {'>'}
         </Text>
       </View>
     </TouchableOpacity>

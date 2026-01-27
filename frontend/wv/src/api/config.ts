@@ -59,7 +59,9 @@ api.interceptors.response.use(
     },
     async (error) => {
         if (__DEV__) {
-            console.error(`[API] ERROR: ${error.config?.method?.toUpperCase()} ${error.config?.url}`, error.response?.status, error.response?.data);
+            const fullUrl = (error.config?.baseURL || '') + (error.config?.url || '');
+            console.log(`[API] ERROR LOG: ${error.config?.method?.toUpperCase()} ${fullUrl}`, error.response?.status);
+            console.log('Error Details:', error.message);
         }
         if (error.response) {
             // Server responded with error

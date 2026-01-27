@@ -121,6 +121,7 @@ export default function AdminDashboard() {
                         value={stats?.totalUsers || 0}
                         icon="people"
                         colors={['#4facfe', '#00f2fe']}
+                        onPress={() => router.push('/(admin)/user-management')}
                     />
                     <StatCard
                         title="Total Shops"

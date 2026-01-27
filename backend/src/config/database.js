@@ -9,6 +9,21 @@ const connectDB = async () => {
 
         console.log(`MongoDB Connected: ${conn.connection.host}`);
 
+        // FIX: Drop problematic indexes that cause creation failures
+        try {
+            const collections = await mongoose.connection.db.listCollections({ name: 'shops' }).toArray();
+            if (collections.length > 0) {
+                const indexExists = await mongoose.connection.collection('shops').indexExists('shop_id_1');
+                if (indexExists) {
+                    await mongoose.connection.collection('shops').dropIndex('shop_id_1');
+                    console.log('✨ FIXED: Dropped orphaned "shop_id_1" index from shops collection');
+                }
+            }
+        } catch (err) {
+            // Index might not exist, which is fine
+            console.log('Index check skipped:', err.message);
+        }
+
         // Handle connection events
         mongoose.connection.on('error', (err) => {
             console.error(`MongoDB connection error: ${err}`);

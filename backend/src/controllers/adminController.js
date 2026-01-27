@@ -107,21 +107,24 @@ const getAllProducts = async (req, res) => {
 const updateProductStatus = async (req, res) => {
     try {
         const { isActive } = req.body;
-        const product = await Product.findById(req.params.id);
+
+        // Use findByIdAndUpdate to bypass full document validation (which might fail on legacy data)
+        const product = await Product.findByIdAndUpdate(
+            req.params.id,
+            { isActive },
+            { new: true } // Return the updated document
+        );
 
         if (!product) {
             return res.status(404).json({ message: 'Product not found' });
         }
-
-        if (isActive !== undefined) product.isActive = isActive;
-
-        await product.save();
 
         res.json({
             message: `Product ${isActive ? 'unblocked' : 'blocked'} successfully`,
             product
         });
     } catch (error) {
+        console.error('Error updating product status:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 };
@@ -153,10 +156,92 @@ const getDashboardStats = async (req, res) => {
     }
 };
 
+/**
+ * @desc    Delete product
+ * @route   DELETE /api/admin/products/:id
+ * @access  Private (Admin)
+ */
+const deleteProduct = async (req, res) => {
+    try {
+        const product = await Product.findById(req.params.id);
+
+        if (!product) {
+            return res.status(404).json({ message: 'Product not found' });
+        }
+
+        await product.deleteOne();
+
+        res.json({ message: 'Product removed' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
+/**
+ * @desc    Get all users
+ * @route   GET /api/admin/users
+ * @access  Private (Admin)
+ */
+const getAllUsers = async (req, res) => {
+    try {
+        const { search, isActive } = req.query;
+        const query = { role: 'user' }; // Only fetch regular users
+
+        if (isActive !== undefined) query.isActive = isActive === 'true';
+        if (search) {
+            query.$or = [
+                { username: { $regex: search, $options: 'i' } },
+                { email: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        const users = await User.find(query).select('-password').sort('-createdAt');
+        res.json({ users });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
+/**
+ * @desc    Update user status (Block/Unblock)
+ * @route   PUT /api/admin/users/:id/status
+ * @access  Private (Admin)
+ */
+const updateUserStatus = async (req, res) => {
+    try {
+        const { isActive } = req.body;
+        const user = await User.findById(req.params.id);
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        if (isActive !== undefined) user.isActive = isActive;
+
+        await user.save();
+
+        res.json({
+            message: `User ${isActive ? 'unblocked' : 'blocked'} successfully`,
+            user: {
+                _id: user._id,
+                username: user.username,
+                email: user.email,
+                isActive: user.isActive
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
 module.exports = {
     getAllShops,
     updateShopStatus,
     getAllProducts,
     updateProductStatus,
-    getDashboardStats
+    getDashboardStats,
+    deleteProduct,
+    getAllUsers,
+    updateUserStatus
 };

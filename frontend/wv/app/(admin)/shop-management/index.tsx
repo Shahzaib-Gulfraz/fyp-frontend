@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { adminService } from '@/src/api';
 import { Image } from 'expo-image';
+import ShopDetailsModal from './components/ShopDetailsModal';
 
 export default function ShopManagement() {
     const router = useRouter();
@@ -25,6 +26,10 @@ export default function ShopManagement() {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [filter, setFilter] = useState<'all' | 'pending' | 'verified' | 'inactive'>('all');
     const [searchQuery, setSearchQuery] = useState('');
+    
+    // Modal state
+    const [detailsModalVisible, setDetailsModalVisible] = useState(false);
+    const [selectedShop, setSelectedShop] = useState<any | null>(null);
 
     const fetchShops = async () => {
         try {
@@ -167,7 +172,11 @@ export default function ShopManagement() {
                 )}
                 <TouchableOpacity
                     style={[styles.actionButton, styles.detailsButton]}
-                    onPress={() => { }} // Could navigate to a detailed view
+                    onPress={() => {
+                        console.log('Opening details for:', item.shopName);
+                        setSelectedShop(item);
+                        setDetailsModalVisible(true);
+                    }}
                 >
                     <Ionicons name="eye-outline" size={20} color="#666" />
                 </TouchableOpacity>
@@ -232,6 +241,17 @@ export default function ShopManagement() {
                             <Text style={styles.emptyText}>No shops found</Text>
                         </View>
                     }
+                />
+            )}
+            
+            {selectedShop && (
+                <ShopDetailsModal 
+                    visible={detailsModalVisible}
+                    onDismiss={() => {
+                        console.log('Dismissing modal');
+                        setDetailsModalVisible(false);
+                    }}
+                    shop={selectedShop}
                 />
             )}
         </SafeAreaView>

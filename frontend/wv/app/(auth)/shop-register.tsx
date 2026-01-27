@@ -214,6 +214,12 @@ export default function RegisterShopScreen() {
       if (!shopData.logo) {
         newErrors.logo = "Shop logo is required";
       }
+
+      if (!shopData.description.trim()) {
+        newErrors.description = "Shop description is required";
+      } else if (shopData.description.trim().length < 20) {
+        newErrors.description = "Description must be at least 20 characters";
+      }
     } else if (stepNumber === 2) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!shopData.email.trim()) {
@@ -222,8 +228,12 @@ export default function RegisterShopScreen() {
         newErrors.email = "Please enter a valid email";
       }
 
+      // Phone validation
+      const phoneRegex = /^[+]?[\d\s-]{10,15}$/;
       if (!shopData.phone.trim()) {
         newErrors.phone = "Phone number is required";
+      } else if (!phoneRegex.test(shopData.phone.trim())) {
+        newErrors.phone = "Invalid format. Example: +92 300 1234567";
       }
 
       if (!shopData.address.trim()) {
@@ -629,6 +639,9 @@ export default function RegisterShopScreen() {
               <Text style={styles.charCount}>
                 {shopData.description.length}/500
               </Text>
+              {errors.description && (
+                <Text style={styles.error}>{errors.description}</Text>
+              )}
             </View>
           </View>
         );
@@ -960,6 +973,14 @@ export default function RegisterShopScreen() {
     }
   };
 
+  const handleBack = () => {
+    if (step > 1) {
+      setStep(step - 1);
+    } else {
+      router.back();
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
@@ -976,7 +997,7 @@ export default function RegisterShopScreen() {
         >
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => router.push("/(auth)/login")}>
+            <TouchableOpacity onPress={handleBack}>
               <Ionicons
                 name="arrow-back"
                 size={24}

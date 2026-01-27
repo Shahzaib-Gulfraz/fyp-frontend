@@ -30,13 +30,15 @@ const getCategories = async (req, res) => {
 const createCategory = async (req, res) => {
     try {
         console.log('B-DEBUG: Creating category:', req.body.name);
-        const { name, icon, description, attributes } = req.body;
+        const { name, icon, description, type, attributes, isTryOnEnabled } = req.body;
 
         const category = await Category.create({
             name,
             icon,
             description,
-            attributes
+            type,
+            attributes,
+            isTryOnEnabled
         });
 
         res.status(201).json({
@@ -66,7 +68,7 @@ const createCategory = async (req, res) => {
  */
 const updateCategory = async (req, res) => {
     try {
-        const { name, icon, description, attributes, isActive } = req.body;
+        const { name, icon, description, type, attributes, isActive, isTryOnEnabled } = req.body;
 
         const category = await Category.findById(req.params.id);
 
@@ -79,8 +81,10 @@ const updateCategory = async (req, res) => {
         category.name = name || category.name;
         category.icon = icon || category.icon;
         category.description = description || category.description;
+        category.type = type || category.type;
         category.attributes = attributes || category.attributes;
         if (isActive !== undefined) category.isActive = isActive;
+        if (isTryOnEnabled !== undefined) category.isTryOnEnabled = isTryOnEnabled;
 
         await category.save();
 

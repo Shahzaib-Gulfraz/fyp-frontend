@@ -84,7 +84,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
       return response;
     } catch (error) {
-      console.error('Login error:', error);
+      console.log('Login error:', error);
       throw error;
     } finally {
       setIsLoading(false);

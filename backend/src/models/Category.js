@@ -55,6 +55,10 @@ const categorySchema = new mongoose.Schema({
     isActive: {
         type: Boolean,
         default: true
+    },
+    isTryOnEnabled: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true

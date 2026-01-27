@@ -5,7 +5,10 @@ const {
     updateShopStatus,
     getAllProducts,
     updateProductStatus,
-    getDashboardStats
+    getDashboardStats,
+    deleteProduct,
+    getAllUsers,
+    updateUserStatus
 } = require('../controllers/adminController');
 const { protect, restrictTo } = require('../middleware/auth');
 
@@ -20,6 +23,11 @@ router.put('/shops/:id/status', updateShopStatus);
 // Product Management
 router.get('/products', getAllProducts);
 router.put('/products/:id/status', updateProductStatus);
+router.delete('/products/:id', deleteProduct);
+
+// User Management
+router.get('/users', getAllUsers);
+router.put('/users/:id/status', updateUserStatus);
 
 // Stats
 router.get('/stats', getDashboardStats);

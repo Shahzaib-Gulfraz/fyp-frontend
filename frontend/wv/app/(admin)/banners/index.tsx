@@ -111,7 +111,13 @@ const AdminBannersScreen = () => {
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
-            <View style={styles.header}>
+            <View style={[styles.header, { backgroundColor: colors.surface }]}>
+                <IconButton
+                    icon="arrow-left"
+                    size={24}
+                    onPress={() => router.back()}
+                    iconColor={colors.text}
+                />
                 <Text style={[styles.title, { color: colors.text }]}>Featured Banners</Text>
             </View>
 
@@ -171,8 +177,20 @@ const AdminBannersScreen = () => {
 const styles = StyleSheet.create({
     container: { flex: 1 },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    header: { padding: 20, paddingBottom: 10 },
-    title: { fontSize: 24, fontWeight: 'bold' },
+    header: {
+        marginTop: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 8,
+        paddingHorizontal: 4,
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        zIndex: 1,
+    },
+    title: { fontSize: 20, fontWeight: 'bold' },
     listContent: { padding: 20, paddingBottom: 80 },
     card: { marginBottom: 15, elevation: 2 },
     cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },

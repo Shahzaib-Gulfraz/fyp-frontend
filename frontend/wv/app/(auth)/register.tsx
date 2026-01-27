@@ -190,11 +190,9 @@ export default function RegisterScreen() {
     }
 
     // Phone validation (optional but with format check if provided)
-    if (
-      phone.trim() &&
-      !/^[\d\s\-\+\(\)]{10,15}$/.test(phone.replace(/\s/g, ""))
-    ) {
-      setPhoneError("Please enter a valid phone number");
+    const phoneRegex = /^[+]?[\d\s-]{10,15}$/;
+    if (phone.trim() && !phoneRegex.test(phone.trim())) {
+      setPhoneError("Invalid format. Example: +92 300 1234567");
       isValid = false;
     }
 

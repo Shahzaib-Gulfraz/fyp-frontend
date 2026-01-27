@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, RefreshControl, Alert } from 'react-native';
-import { Text, FAB, Card, Button, Searchbar, Chip, IconButton, ActivityIndicator } from 'react-native-paper';
+import { View, StyleSheet, ScrollView, RefreshControl, Alert, TouchableOpacity, SafeAreaView, StatusBar } from 'react-native';
+import { Text, FAB, Card, Searchbar, Chip, IconButton, ActivityIndicator } from 'react-native-paper';
 import { useRouter } from 'expo-router';
+import { ArrowLeft } from 'lucide-react-native';
 import { productService } from '@/src/api/productService';
 import { useTheme } from '@/src/context/ThemeContext';
+import { appTheme } from '@/src/theme/appTheme';
 import CategoryFormModal from './components/CategoryFormModal';
 
 const AdminCategoriesScreen = () => {
-    const { colors, spacing } = useTheme();
+    const { colors, isDark } = useTheme();
+    const { spacing, fonts } = appTheme.tokens;
     const router = useRouter();
     const [categories, setCategories] = useState<any[]>([]);
     const [filteredCategories, setFilteredCategories] = useState<any[]>([]);
@@ -79,7 +82,7 @@ const AdminCategoriesScreen = () => {
                             await (productService as any).deleteCategory(id);
                             fetchCategories();
                             Alert.alert('Success', 'Category deleted successfully');
-                        } catch (error) {
+                        } catch {
                             Alert.alert('Error', 'Failed to delete category');
                         }
                     }
@@ -105,16 +108,51 @@ const AdminCategoriesScreen = () => {
 
     if (loading && !refreshing) {
         return (
-            <View style={[styles.center, { backgroundColor: colors.background }]}>
-                <ActivityIndicator size="large" color={colors.primary} />
-            </View>
+            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+                <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+                <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+                    <ActivityIndicator size="large" color={colors.primary} />
+                </View>
+            </SafeAreaView>
         );
     }
 
     return (
-        <View style={[styles.container, { backgroundColor: colors.background }]}>
-            <View style={styles.header}>
-                <Text style={[styles.title, { color: colors.text }]}>Category Management</Text>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+            <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+            
+            {/* Header with Back Button */}
+            <View style={[styles.header, { 
+                backgroundColor: colors.surface,
+                borderBottomColor: colors.border,
+                borderBottomWidth: 1,
+                paddingHorizontal: spacing.lg,
+                paddingVertical: spacing.md,
+            }]}>
+                <TouchableOpacity 
+                    onPress={() => router.back()}
+                    style={styles.backButton}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                    <ArrowLeft size={24} color={colors.primary} strokeWidth={2.5} />
+                </TouchableOpacity>
+                <View style={styles.headerTitleSection}>
+                    <Text style={[styles.title, { 
+                        color: colors.text, 
+                        fontFamily: fonts.bold,
+                        fontSize: 28,
+                    }]}>
+                        Categories
+                    </Text>
+                    <Text style={[styles.subtitle, { 
+                        color: colors.textSecondary,
+                        fontFamily: fonts.regular,
+                        fontSize: 13,
+                        marginTop: 4,
+                    }]}>
+                        {categories.length} total
+                    </Text>
+                </View>
             </View>
 
             <View style={styles.filterSection}>
@@ -191,17 +229,37 @@ const AdminCategoriesScreen = () => {
                 onSubmit={() => { setModalVisible(false); fetchCategories(); }}
                 category={editingCategory}
             />
-        </View>
+        </SafeAreaView>
     );
 };
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
-    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    header: { padding: 20, paddingBottom: 10 },
-    title: { fontSize: 24, fontWeight: 'bold' },
+    loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    header: { 
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderBottomWidth: 1,
+        marginTop: 20,
+    },
+    backButton: {
+        marginRight: 12,
+        padding: 8,
+    },
+    headerTitleSection: {
+        flex: 1,
+    },
+    title: { 
+        fontSize: 28, 
+        fontWeight: 'bold',
+        marginBottom: 4,
+    },
+    subtitle: {
+        fontSize: 13,
+        marginTop: 4,
+    },
     filterSection: { paddingHorizontal: 20, marginBottom: 10 },
-    searchBar: { marginBottom: 10, elevation: 0, border: 1 },
+    searchBar: { marginBottom: 10, elevation: 0 },
     typeScroll: { flexDirection: 'row' },
     chip: { marginRight: 8 },
     listContent: { padding: 20, paddingBottom: 80 },

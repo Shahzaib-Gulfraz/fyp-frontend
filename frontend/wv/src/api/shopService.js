@@ -83,8 +83,13 @@ const shopService = {
                     formData.append('logo', blob, 'logo.jpg');
                 } else {
                     // Native: Use object with uri, type, name
+                    // Ensure URI is clean for Android
+                    const cleanUri = Platform.OS === 'android' && !images.logo.startsWith('file://') 
+                        ? images.logo 
+                        : images.logo; 
+                        
                     formData.append('logo', {
-                        uri: images.logo,
+                        uri: cleanUri,
                         type: 'image/jpeg',
                         name: 'logo.jpg',
                     });
@@ -110,8 +115,16 @@ const shopService = {
                 }
             }
 
-            console.log('Sending register request to /shops/register...');
-            const response = await api.post('/shops/register', formData);
+            console.log('Sending register request to /shops/register with FormData...');
+            
+            const response = await api.post('/shops/register', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+                transformRequest: (data, headers) => {
+                    return data; // Prevent Axios from stringifying FormData
+                }
+            });
 
             console.log('Register request successful:', !!response.data.token);
 

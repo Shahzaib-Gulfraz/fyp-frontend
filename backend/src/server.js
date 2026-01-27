@@ -15,6 +15,13 @@ app.use(cors({
   origin: process.env.CORS_ORIGIN?.split(',') || '*',
   credentials: true
 }));
+
+// DEBUG LOGGING - Log all requests
+app.use((req, res, next) => {
+  console.log(`[SERVER] ${req.method} ${req.originalUrl}`);
+  next();
+});
+
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
@@ -78,7 +85,8 @@ app.use(notFound);
 // Error handler (must be last)
 app.use(errorHandler);
 
-server.listen(port, () => {
+server.listen(port, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${port}`);
   console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🌐 Network: http://192.168.100.44:${port}`);
 });

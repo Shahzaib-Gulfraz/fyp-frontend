@@ -52,12 +52,46 @@ const adminService = {
         }
     },
 
-    /**
-     * Update product status (Block/Unblock)
+    /**     * Delete product
+     */
+    deleteProduct: async (productId) => {
+        try {
+            const response = await api.delete(`/admin/products/${productId}`);
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
+    },
+
+    /**     * Update product status (Block/Unblock)
      */
     updateProductStatus: async (productId, statusData) => {
         try {
             const response = await api.put(`/admin/products/${productId}/status`, statusData);
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
+    },
+
+    /**
+     * Get all users
+     */
+    getUsers: async (params = {}) => {
+        try {
+            const response = await api.get('/admin/users', { params });
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
+    },
+
+    /**
+     * Update user status (Block/Unblock)
+     */
+    updateUserStatus: async (userId, statusData) => {
+        try {
+            const response = await api.put(`/admin/users/${userId}/status`, statusData);
             return response.data;
         } catch (error) {
             throw error;
