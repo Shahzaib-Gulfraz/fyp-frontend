@@ -1,7 +1,7 @@
 const Return = require('../models/Return');
 const Order = require('../models/Order');
 const Notification = require('../models/Notification');
-const { io, getSocketId } = require('../socket/socketService');
+const socketService = require('../socket/socketService');
 const { createNotification } = require('./notificationController');
 
 // @desc    Create return request
@@ -73,16 +73,13 @@ exports.createReturnRequest = async (req, res) => {
             });
 
             // Send real-time notification via socket
-            const shopSocketId = getSocketId(order.shopId.toString());
-            if (shopSocketId) {
-                io.to(shopSocketId).emit('notification:new', {
-                    notification,
-                    unreadCount: await Notification.countDocuments({ 
-                        userId: order.shopId, 
-                        isRead: false 
-                    })
-                });
-            }
+            socketService.emitToUser(order.shopId.toString(), 'notification:new', {
+                notification,
+                unreadCount: await Notification.countDocuments({ 
+                    userId: order.shopId, 
+                    isRead: false 
+                })
+            });
         } catch (notifError) {
             console.error('Failed to create return notification:', notifError);
         }
