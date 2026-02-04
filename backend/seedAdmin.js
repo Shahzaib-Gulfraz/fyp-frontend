@@ -42,7 +42,7 @@ async function seedAdmin() {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('Email:    admin@wearvirtually.com');
     console.log('Username: admin');
-    console.log('Password: ' + adminPassword);
+    console.log('Password: <as configured in ADMIN_PASSWORD>');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
     console.log('⚠️  Change password after first login!\n');
 
