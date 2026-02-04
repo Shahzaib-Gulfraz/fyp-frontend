@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/src/context/ThemeContext';
+import { useSocket } from '@/src/context/SocketContext';
 import { notificationService } from '@/src/api/notificationService';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,6 +20,7 @@ import { useRouter } from 'expo-router';
 export default function NotificationsScreen() {
     const { colors } = useTheme();
     const router = useRouter();
+    const { socket, unreadNotifications, setUnreadNotifications } = useSocket();
     const [notifications, setNotifications] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -50,6 +52,31 @@ export default function NotificationsScreen() {
         fetchNotifications();
     }, []);
 
+    // Listen for real-time notifications
+    useEffect(() => {
+        if (socket) {
+            const handleNewNotification = (data: any) => {
+                console.log('[Notifications Screen] New notification received:', data);
+                
+                // Add new notification to the top of the list
+                if (data.notification) {
+                    setNotifications(prev => [data.notification, ...prev]);
+                }
+                
+                // Update unread count
+                if (data.unreadCount !== undefined) {
+                    setUnreadNotifications(data.unreadCount);
+                }
+            };
+
+            socket.on('notification:new', handleNewNotification);
+
+            return () => {
+                socket.off('notification:new', handleNewNotification);
+            };
+        }
+    }, [socket, setUnreadNotifications]);
+
     const handleRefresh = () => {
         setRefreshing(true);
         setPage(1);
@@ -65,13 +92,15 @@ export default function NotificationsScreen() {
     };
 
     const handlePress = async (notification: any) => {
-        // Mark as read if receiving
+        // Mark as read if unread
         if (!notification.isRead) {
             try {
                 await notificationService.markAsRead(notification._id);
                 setNotifications(prev =>
                     prev.map(n => n._id === notification._id ? { ...n, isRead: true } : n)
                 );
+                // Decrease unread count
+                setUnreadNotifications(prev => Math.max(0, prev - 1));
             } catch (error) {
                 console.error('Failed to mark read:', error);
             }
@@ -83,17 +112,36 @@ export default function NotificationsScreen() {
                 router.push('/(main)/friends?tab=requests');
                 break;
             case 'friend_accept':
-                router.push(`/(main)/profile/${notification.sender._id}`);
+                if (notification.sender?._id || notification.data?.userId) {
+                    router.push(`/(main)/profile/${notification.sender?._id || notification.data?.userId}`);
+                }
                 break;
             case 'message':
-                router.push(`/(main)/conversation/${notification.refId}`); // Usually conversation ID is ideal, might need adjustment
+                if (notification.refId || notification.data?.conversationId) {
+                    router.push(`/(main)/chats/${notification.refId || notification.data?.conversationId}`);
+                }
                 break;
             case 'like':
             case 'comment':
-                router.push(`/(main)/social/post/${notification.refId}`);
+                if (notification.refId || notification.data?.postId) {
+                    router.push(`/(main)/social/post/${notification.refId || notification.data?.postId}`);
+                }
                 break;
             case 'order_status':
-                router.push(`/(main)/shop/orders/${notification.refId}`);
+            case 'order_update':
+            case 'new_order':
+                if (notification.refId || notification.data?.orderId) {
+                    router.push(`/(main)/orders`);
+                }
+                break;
+            case 'return_request':
+            case 'return_update':
+                router.push(`/(main)/orders`);
+                break;
+            case 'shop_reply':
+                if (notification.data?.conversationId) {
+                    router.push(`/(main)/chats/${notification.data.conversationId}`);
+                }
                 break;
             default:
                 break;
@@ -154,7 +202,12 @@ export default function NotificationsScreen() {
             case 'like': return 'heart';
             case 'comment': return 'chatbubble';
             case 'message': return 'mail';
-            case 'order_status': return 'cart';
+            case 'shop_reply': return 'chatbubbles';
+            case 'order_status':
+            case 'order_update':
+            case 'new_order': return 'cart';
+            case 'return_request':
+            case 'return_update': return 'return-up-back';
             default: return 'notifications';
         }
     };
@@ -163,12 +216,22 @@ export default function NotificationsScreen() {
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
             <View style={[styles.header, { backgroundColor: colors.surface }]}>
                 <Text style={[styles.headerTitle, { color: colors.text }]}>Notifications</Text>
-                <TouchableOpacity onPress={() => {
-                    notificationService.markAllAsRead();
-                    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-                }}>
-                    <Text style={{ color: colors.primary }}>Mark all read</Text>
-                </TouchableOpacity>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    {unreadNotifications > 0 && (
+                        <View style={[styles.unreadBadge, { backgroundColor: colors.primary + '20' }]}>
+                            <Text style={[styles.unreadBadgeText, { color: colors.primary }]}>
+                                {unreadNotifications} new
+                            </Text>
+                        </View>
+                    )}
+                    <TouchableOpacity onPress={() => {
+                        notificationService.markAllAsRead();
+                        setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+                        setUnreadNotifications(0);
+                    }}>
+                        <Text style={{ color: colors.primary }}>Mark all read</Text>
+                    </TouchableOpacity>
+                </View>
             </View>
 
             {loading && page === 1 ? (
@@ -282,5 +345,14 @@ const styles = StyleSheet.create({
     emptyText: {
         marginTop: 16,
         fontSize: 16,
+    },
+    unreadBadge: {
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
+    },
+    unreadBadgeText: {
+        fontSize: 12,
+        fontWeight: '600',
     }
 });

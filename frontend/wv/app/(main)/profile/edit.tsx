@@ -47,6 +47,7 @@ export default function EditProfileScreen() {
   });
 
   const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [newImageUri, setNewImageUri] = useState<string | null>(null);
 
   const [isFetchingData, setIsFetchingData] = useState(true);
 
@@ -64,9 +65,9 @@ export default function EditProfileScreen() {
       } finally {
         setIsFetchingData(false);
       }
-    };
+};
     loadData();
-  }, [refreshProfile]);
+  }, []);
 
   // Update form when user data changes
   useEffect(() => {
@@ -93,10 +94,11 @@ export default function EditProfileScreen() {
       userData.name !== originalData.name ||
       userData.bio !== originalData.bio ||
       userData.location !== originalData.location ||
-      userData.phone !== originalData.phone;
+      userData.phone !== originalData.phone ||
+      newImageUri !== null;
 
     setChangesMade(hasChanges);
-  }, [userData, originalData]);
+  }, [userData, originalData, newImageUri]);
 
   if (isFetchingData) {
     return (
@@ -135,44 +137,15 @@ export default function EditProfileScreen() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
     });
 
     if (!result.canceled && result.assets[0].uri) {
-      handleImageUpload(result.assets[0].uri);
-    }
-  };
-
-  const handleImageUpload = async (uri: string) => {
-    setIsLoading(true);
-    try {
-      const { authService } = await import('../../../src/api');
-
-      // Upload to Cloudinary via backend
-      const response = await authService.uploadAvatar(uri);
-
-      // Update local state
-      setProfileImage(response.profileImage);
-
-      // Refresh context to update app-wide
-      await refreshProfile();
-
-      Toast.show({
-        type: 'success',
-        text1: 'Profile photo updated',
-      });
-    } catch (error: any) {
-      console.error('Image upload error:', error);
-      Toast.show({
-        type: 'error',
-        text1: 'Failed to upload image',
-        text2: error.message || 'Please try again',
-      });
-    } finally {
-      setIsLoading(false);
+      setNewImageUri(result.assets[0].uri);
+      setProfileImage(result.assets[0].uri);
     }
   };
 
@@ -195,10 +168,28 @@ export default function EditProfileScreen() {
     try {
       const { authService } = await import('../../../src/api');
 
-      // Prepare payload
+      // Step 1: Upload image first if selected
+      if (newImageUri) {
+        try {
+          console.log('📤 Uploading image:', newImageUri);
+          const imageResponse = await authService.uploadAvatar(newImageUri);
+          console.log('✅ Image uploaded, URL:', imageResponse.profileImage);
+          // Update the profile image state with the uploaded URL
+          setProfileImage(imageResponse.profileImage);
+        } catch (imageError: any) {
+          console.error('❌ Image upload error:', imageError);
+          Toast.show({
+            type: 'error',
+            text1: 'Failed to upload image',
+            text2: 'Continuing with profile update...',
+          });
+        }
+      }
+
+      // Step 2: Update profile data
       const updatePayload = {
         username: userData.username,
-        fullName: userData.name, // Map back to fullName
+        fullName: userData.name,
         bio: userData.bio,
         location: userData.location,
         phone: userData.phone,
@@ -206,11 +197,12 @@ export default function EditProfileScreen() {
 
       await authService.updateProfile(updatePayload);
 
-      // Update original data to current
+      // Update states
       setOriginalData({ ...userData });
+      setNewImageUri(null);
       setChangesMade(false);
 
-      // Refresh global user state
+      // Refresh user context
       await refreshProfile();
 
       Toast.show({
@@ -218,8 +210,7 @@ export default function EditProfileScreen() {
         text1: 'Profile updated successfully',
       });
 
-      // Optional: Go back after save
-      // router.back();
+      setTimeout(() => router.back(), 1000);
     } catch (error: any) {
       console.error('Profile update error:', error);
       Toast.show({

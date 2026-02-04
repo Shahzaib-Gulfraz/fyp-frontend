@@ -56,7 +56,6 @@ const ProductMetadataForm: React.FC<ProductMetadataFormProps> = ({ editProduct, 
   const [originalPrice, setOriginalPrice] = useState('');
   const [sku, setSku] = useState('');
   const [description, setDescription] = useState('');
-  const [subcategory, setSubcategory] = useState('');
   const [stockQuantity, setStockQuantity] = useState('0'); // Default to '0' string
   const [careInstructions, setCareInstructions] = useState('');
   const [tryon, setTryon] = useState(false);
@@ -102,7 +101,7 @@ const ProductMetadataForm: React.FC<ProductMetadataFormProps> = ({ editProduct, 
 
   const pickThumbnail = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.5, // Reduced to prevent file size issues
@@ -115,7 +114,7 @@ const ProductMetadataForm: React.FC<ProductMetadataFormProps> = ({ editProduct, 
 
   const pickImages = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsMultipleSelection: true,
       selectionLimit: 6 - productImages.length,
       quality: 0.5, // Reduced to prevent file size issues
@@ -209,7 +208,6 @@ const ProductMetadataForm: React.FC<ProductMetadataFormProps> = ({ editProduct, 
       setOriginalPrice(editProduct.compareAtPrice?.toString() || '');
       setSku(editProduct.sku || '');
       setDescription(editProduct.description || '');
-      setSubcategory(editProduct.subcategory || '');
       setStockQuantity(editProduct.stockQuantity?.toString() || '0');
       setCareInstructions(editProduct.careInstructions || '');
       setTryon(editProduct.tryon || false);
@@ -362,7 +360,6 @@ const ProductMetadataForm: React.FC<ProductMetadataFormProps> = ({ editProduct, 
         compareAtPrice: parseFloat(originalPrice) || 0,
         sku,
         description,
-        subcategory: subcategory || undefined,
         stockQuantity: parseInt(stockQuantity) || 0,
         careInstructions,
         tryon,
@@ -714,26 +711,6 @@ const ProductMetadataForm: React.FC<ProductMetadataFormProps> = ({ editProduct, 
             )}
           </ScrollView>
 
-          {/* Subcategory Input Field (Optional) */}
-          {selectedCategory && (
-            <TextInput
-              label="Subcategory (Optional)"
-              value={subcategory}
-              onChangeText={setSubcategory}
-              mode="outlined"
-              placeholder="e.g., Casual T-Shirts, Formal Shirts, etc."
-              style={[
-                styles.input,
-                {
-                  backgroundColor: colors.background,
-                  marginBottom: spacing.md,
-                  marginTop: spacing.sm,
-                }
-              ]}
-              theme={{ colors: { primary: colors.primary } }}
-            />
-          )}
-
           {/* Removed hardcoded Colors section */}
           {/* Removed hardcoded Sizes section */}
 
@@ -790,45 +767,47 @@ const ProductMetadataForm: React.FC<ProductMetadataFormProps> = ({ editProduct, 
             placeholder="How to care for this product..."
           />
 
-          {/* Try-On Toggle */}
-          <TouchableOpacity
-            onPress={() => setTryon(!tryon)}
-            style={[
-              styles.toggleContainer,
-              {
-                backgroundColor: tryon ? colors.primary + '10' : colors.surface,
-                borderColor: tryon ? colors.primary : colors.border,
-                borderRadius: radius.md,
-                marginBottom: spacing.sm,
-              }
-            ]}
-          >
-            <View style={styles.toggleContent}>
-              <View>
-                <Text style={[styles.toggleLabel, { color: colors.text, fontFamily: fonts.semiBold }]}>
-                  Virtual Try-On Available
-                </Text>
-                <Text style={[styles.toggleSubtext, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
-                  Enable AR try-on for this product
-                </Text>
-              </View>
-              <View style={[
-                styles.toggle,
+          {/* Try-On Toggle - Only show if category has try-on enabled */}
+          {selectedCategory?.isTryOnEnabled && (
+            <TouchableOpacity
+              onPress={() => setTryon(!tryon)}
+              style={[
+                styles.toggleContainer,
                 {
-                  backgroundColor: tryon ? colors.primary : colors.border,
-                  borderRadius: radius.full,
+                  backgroundColor: tryon ? colors.primary + '10' : colors.surface,
+                  borderColor: tryon ? colors.primary : colors.border,
+                  borderRadius: radius.md,
+                  marginBottom: spacing.sm,
                 }
-              ]}>
+              ]}
+            >
+              <View style={styles.toggleContent}>
+                <View>
+                  <Text style={[styles.toggleLabel, { color: colors.text, fontFamily: fonts.semiBold }]}>
+                    Virtual Try-On Available
+                  </Text>
+                  <Text style={[styles.toggleSubtext, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+                    Enable AR try-on for this product
+                  </Text>
+                </View>
                 <View style={[
-                  styles.toggleThumb,
+                  styles.toggle,
                   {
-                    backgroundColor: colors.background,
-                    transform: [{ translateX: tryon ? 20 : 0 }],
+                    backgroundColor: tryon ? colors.primary : colors.border,
+                    borderRadius: radius.full,
                   }
-                ]} />
+                ]}>
+                  <View style={[
+                    styles.toggleThumb,
+                    {
+                      backgroundColor: colors.background,
+                      transform: [{ translateX: tryon ? 20 : 0 }],
+                    }
+                  ]} />
+                </View>
               </View>
-            </View>
-          </TouchableOpacity>
+            </TouchableOpacity>
+          )}
 
           {/* Featured Toggle */}
           <TouchableOpacity
@@ -1275,18 +1254,22 @@ const styles = StyleSheet.create({
   toggleContainer: {
     padding: 16,
     borderWidth: 1,
+    width: '100%',
   },
   toggleContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    flexWrap: 'nowrap',
   },
   toggleLabel: {
     fontSize: 15,
     marginBottom: 4,
+    flexShrink: 1,
   },
   toggleSubtext: {
     fontSize: 12,
+    flexShrink: 1,
   },
   toggle: {
     width: 48,

@@ -110,29 +110,35 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   const refreshProfile = async () => {
     try {
-      // In a real implementation, this would call api.get('/auth/me')
-      // For now, we'll try to use the authService if available
+      console.log('[UserContext] Starting profile refresh...');
       const { authService } = await import('@/src/api');
       try {
         const userData = await authService.getProfile();
+        console.log('[UserContext] Received profile data:', userData);
+        
         // Check if userData is nested under 'user' key or is the user object directly
         const freshUser = userData.user || userData;
+        console.log('[UserContext] Fresh user data:', freshUser);
 
         setUser(prev => {
           // If we have fresh data, use it to populate user state
-          return {
+          const updatedUser = {
             ...(prev || {}),
             ...freshUser,
             // Ensure ID is consistent if backend returns _id
             id: freshUser.id || freshUser._id || (prev ? prev.id : '')
           };
+          console.log('[UserContext] Updated user state:', updatedUser);
+          return updatedUser;
         });
-        console.log("Profile refreshed successfully");
+        console.log("[UserContext] Profile refreshed successfully");
       } catch (err) {
-        console.error("Failed to fetch fresh profile from API:", err);
+        console.error("[UserContext] Failed to fetch fresh profile from API:", err);
+        throw err;
       }
     } catch (e) {
-      console.log("Auth service not available yet or error importing");
+      console.error("[UserContext] Auth service error or import error:", e);
+      throw e;
     }
   };
 

@@ -10,13 +10,11 @@ import {
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useRouter } from "expo-router";
-import { Plus, Grid3x3, Settings, Upload } from "lucide-react-native";
+import { Plus, Grid3x3, Settings } from "lucide-react-native";
 import { useTheme } from "@/src/context/ThemeContext";
 import { appTheme } from "@/src/theme/appTheme";
 
 import ManagementTabs from "./components/ManagementTabs";
-import Upload3DSection from "./components/Upload3DSection";
-import UploadExistingModel from "./components/UploadExistingModel";
 import ProductMetadataForm from "./components/ProductMetadataForm";
 import CatalogSection from "./components/CatalogSection";
 
@@ -53,11 +51,6 @@ const ProductCatalogScreen: React.FC = () => {
 
   const handleEditProduct = (product: any) => {
     setEditingProduct(product);
-    setActiveTab("manage");
-  };
-
-  const handleCreateNew = () => {
-    setEditingProduct(null);
     setActiveTab("manage");
   };
 
@@ -126,12 +119,14 @@ const ProductCatalogScreen: React.FC = () => {
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <StatusBar style={isDark ? "light" : "dark"} />
 
-      <ManagementTabs
-        title="Product Management"
-        subtitle="Manage your shop inventory"
-        showBack
-        onBackPress={() => router.back()}
-      />
+      <View style={{ marginTop: 20 }}>
+        <ManagementTabs
+          title="Product Management"
+          subtitle="Manage your shop inventory"
+          showBack
+          onBackPress={() => router.replace('/seller/products')}
+        />
+      </View>
 
       {/* Custom Tabs */}
       <View style={[

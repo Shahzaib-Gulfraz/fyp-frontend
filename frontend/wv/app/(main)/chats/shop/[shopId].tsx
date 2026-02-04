@@ -72,7 +72,12 @@ export default function ShopChatScreen() {
 
         const handleNewMessage = (message: any) => {
             if (message.conversationId === conversation._id) {
-                setMessages(prev => [message, ...prev]);
+                // Check if message already exists to prevent duplicates
+                setMessages(prev => {
+                    const exists = prev.some(m => m._id === message._id);
+                    if (exists) return prev;
+                    return [message, ...prev];
+                });
                 setIsTyping(false); // Stop typing indicator on message
                 scrollToBottom();
 
@@ -148,14 +153,24 @@ export default function ShopChatScreen() {
                 socket.emit('stopped_typing', { conversationId: conversation._id, userId: conversation.participants[0]._id });
             }
 
-            const response = await shopChatService.sendMessage(
-                shopId as string,
-                messageText.trim() || `Check out this product!`,
-                selectedProduct?._id
-            );
+            const text = messageText.trim() || (selectedProduct ? `Check out this product!` : '');
+            
+            // Only pass productId if a product is actually selected
+            const response = selectedProduct?._id 
+                ? await shopChatService.sendMessage(shopId as string, text, selectedProduct._id)
+                : await shopChatService.sendMessage(shopId as string, text);
 
-            const newMessage = response.data.message;
-            setMessages(prev => [newMessage, ...prev]);
+            // Add the message from API response immediately for the sender
+            if (response.data?.message) {
+                setMessages(prev => {
+                    const exists = prev.some(m => m._id === response.data.message._id);
+                    if (!exists) {
+                        return [response.data.message, ...prev];
+                    }
+                    return prev;
+                });
+            }
+
             setMessageText('');
             setSelectedProduct(null);
             scrollToBottom();
@@ -222,7 +237,7 @@ export default function ShopChatScreen() {
                     <Text style={[styles.messageText, isMyMessage && styles.myMessageText]}>
                         {item.text}
                     </Text>
-                    {item.productMention && (
+                    {item.productMention?.productId && item.productMention?.productName && (
                         <ProductMentionCard product={item.productMention} theme={theme} />
                     )}
                     <Text style={[styles.messageTime, isMyMessage && styles.myMessageTime]}>
@@ -323,7 +338,7 @@ export default function ShopChatScreen() {
                     ref={flatListRef}
                     data={messages}
                     renderItem={renderMessage}
-                    keyExtractor={(item) => item._id}
+                    keyExtractor={(item, index) => item._id || `message-${index}-${item.createdAt}`}
                     inverted
                     contentContainerStyle={styles.messagesList}
                     onEndReached={loadMoreMessages}

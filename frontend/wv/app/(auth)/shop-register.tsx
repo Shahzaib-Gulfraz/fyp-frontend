@@ -184,7 +184,7 @@ export default function RegisterShopScreen() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: type === "logo" ? [1, 1] : [3, 1],
       quality: 0.8,

@@ -34,10 +34,12 @@ export default function SellerNotifications() {
     const loadNotifications = async () => {
         try {
             setLoading(true);
-            const data = await notificationService.getNotifications();
-            setNotifications(data.notifications || []);
-            // Update global badge count if supported by API returning count
-            // Or assume marking read decrements it
+            const response = await notificationService.getNotifications();
+            setNotifications(response.data?.notifications || response.notifications || []);
+            
+            // Update unread count from API response
+            const unread = response.data?.unreadCount || 0;
+            setUnreadNotifications(unread);
         } catch (error) {
             console.error('Failed to load notifications:', error);
         } finally {
@@ -111,7 +113,7 @@ export default function SellerNotifications() {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.headerBar}>
-                <TouchableOpacity onPress={() => router.back()}>
+                <TouchableOpacity onPress={() => router.replace('/seller/dashboard')}>
                     <Ionicons name="arrow-back" size={24} color={colors.text} />
                 </TouchableOpacity>
                 <Text style={styles.title}>Notifications</Text>

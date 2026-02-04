@@ -16,7 +16,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Heart, ShoppingCart, Bell, ArrowLeft, Share2 } from 'lucide-react-native';
 import { useTheme } from '@/src/context/ThemeContext';
+import { useSocket } from '@/src/context/SocketContext';
 import productService from '@/src/api/productService';
 import cartService from '@/src/api/cartService';
 import reviewService from '@/src/api/reviewService';
@@ -28,7 +30,8 @@ const { width } = Dimensions.get('window');
 export default function ProductDetailScreen() {
     const { id } = useLocalSearchParams();
     const router = useRouter();
-    const { colors } = useTheme();
+    const { colors, isDark } = useTheme();
+    const { unreadNotifications } = useSocket();
     const [product, setProduct] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -38,6 +41,7 @@ export default function ProductDetailScreen() {
     const [addingToCart, setAddingToCart] = useState(false);
     const [reviews, setReviews] = useState<any[]>([]);
     const [reviewsLoading, setReviewsLoading] = useState(false);
+    const [cartItemCount, setCartItemCount] = useState(0);
 
     // Share State
     const [showShareOptions, setShowShareOptions] = useState(false);
@@ -75,7 +79,20 @@ export default function ProductDetailScreen() {
         if (id) {
             fetchProduct();
         }
+        fetchCartCount();
     }, [id]);
+
+    const fetchCartCount = async () => {
+        try {
+            const response = await cartService.getCart();
+            if (response?.cart?.items) {
+                const totalItems = response.cart.items.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
+                setCartItemCount(totalItems);
+            }
+        } catch (error) {
+            console.log('Failed to fetch cart count:', error);
+        }
+    };
 
     const loadReviews = async (productId: string) => {
         try {
@@ -154,23 +171,66 @@ export default function ProductDetailScreen() {
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-            {/* Header */}
+            {/* Header - Same as Home */}
             <View style={[styles.header, { backgroundColor: colors.background }]}>
-                <TouchableOpacity
-                    onPress={() => {
-                        if (router.canGoBack()) {
-                            router.back();
-                        } else {
-                            router.push('/home');
-                        }
-                    }}
-                    style={styles.headerButton}
-                >
-                    <Ionicons name="arrow-back" size={24} color={colors.text} />
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.headerButton} onPress={() => setShowShareOptions(true)}>
-                    <Ionicons name="share-outline" size={24} color={colors.text} />
-                </TouchableOpacity>
+                <View style={styles.headerContent}>
+                    <TouchableOpacity
+                        onPress={() => {
+                            if (router.canGoBack()) {
+                                router.back();
+                            } else {
+                                router.push('/home');
+                            }
+                        }}
+                        style={[styles.backBtn, { backgroundColor: isDark ? colors.surface : '#FFF5F7' }]}
+                    >
+                        <ArrowLeft size={24} color={colors.text} />
+                    </TouchableOpacity>
+
+                    <View style={{ flexDirection: 'row', gap: 12 }}>
+                        <TouchableOpacity
+                            style={[styles.headerIconBtn, { backgroundColor: isDark ? colors.surface : '#FFF5F7', position: 'relative' }]}
+                            onPress={() => router.push("/(main)/notifications")}
+                        >
+                            <Bell size={24} color={colors.primary} />
+                            {unreadNotifications > 0 && (
+                                <View style={styles.badge}>
+                                    <Text style={styles.badgeText}>
+                                        {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                                    </Text>
+                                </View>
+                            )}
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[styles.headerIconBtn, { backgroundColor: isDark ? colors.surface : '#FFF5F7', position: 'relative' }]}
+                            onPress={() => router.push("/(main)/cart")}
+                        >
+                            <ShoppingCart size={24} color={colors.primary} />
+                            {cartItemCount > 0 && (
+                                <View style={styles.badge}>
+                                    <Text style={styles.badgeText}>
+                                        {cartItemCount > 9 ? '9+' : cartItemCount}
+                                    </Text>
+                                </View>
+                            )}
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[styles.headerIconBtn, { backgroundColor: isDark ? colors.surface : '#FFF5F7' }]}
+                            onPress={() => router.push("/(main)/saved-items")}
+                        >
+                            <Heart size={24} color={colors.primary} />
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[styles.headerIconBtn, { backgroundColor: isDark ? colors.surface : '#FFF5F7' }]}
+                            onPress={() => setShowShareOptions(true)}
+                        >
+                            <Share2 size={24} color={colors.primary} />
+                        </TouchableOpacity>
+                    </View>
+                </View>
             </View>
 
             {/* Share Options Modal */}
@@ -621,11 +681,48 @@ const styles = StyleSheet.create({
         padding: 12,
     },
     header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
         paddingHorizontal: 16,
         paddingVertical: 12,
-        elevation: 2,
+        borderBottomWidth: 1,
+        borderBottomColor: '#E5E5E5',
+    },
+    headerContent: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    backBtn: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    headerIconBtn: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    badge: {
+        position: 'absolute',
+        top: -2,
+        right: -2,
+        backgroundColor: '#FF4757',
+        borderRadius: 8,
+        minWidth: 16,
+        height: 16,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 4,
+        borderWidth: 1.5,
+        borderColor: '#fff',
+    },
+    badgeText: {
+        color: '#fff',
+        fontSize: 9,
+        fontWeight: 'bold',
     },
     headerButton: {
         width: 40,

@@ -40,7 +40,25 @@ const conversationSchema = new mongoose.Schema({
         default: {}
     }
 }, {
-    timestamps: true
+    timestamps: true,
+    toJSON: {
+        transform: function(doc, ret) {
+            // Convert Map to plain object for JSON serialization
+            if (ret.unreadCount instanceof Map) {
+                ret.unreadCount = Object.fromEntries(ret.unreadCount);
+            }
+            return ret;
+        }
+    },
+    toObject: {
+        transform: function(doc, ret) {
+            // Convert Map to plain object
+            if (ret.unreadCount instanceof Map) {
+                ret.unreadCount = Object.fromEntries(ret.unreadCount);
+            }
+            return ret;
+        }
+    }
 });
 
 // Index to quickly find conversations for a user

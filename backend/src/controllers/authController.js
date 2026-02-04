@@ -180,13 +180,20 @@ const getMe = async (req, res) => {
  */
 const updateProfile = async (req, res) => {
     try {
-        console.log("/updateProfile")
+        console.log("/updateProfile");
+        console.log("Request body:", req.body);
+        console.log("User ID:", req.user._id);
+        
         const { fullName, phone, username, bio, location } = req.body;
 
         const user = await User.findById(req.user._id);
+        
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
 
         if (fullName) user.fullName = fullName;
-        if (phone) user.phone = phone;
+        if (phone !== undefined) user.phone = phone;
         if (username) {
             // Check if username is taken by another user
             const existingUser = await User.findOne({ username, _id: { $ne: user._id } });
@@ -199,12 +206,16 @@ const updateProfile = async (req, res) => {
         if (location !== undefined) user.location = location;
 
         await user.save();
+        
+        const updatedUser = user.toPublicJSON();
+        console.log("Updated user:", updatedUser);
 
         res.json({
             message: 'Profile updated successfully',
-            user: user.toPublicJSON()
+            user: updatedUser
         });
     } catch (error) {
+        console.error("Update profile error:", error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 };

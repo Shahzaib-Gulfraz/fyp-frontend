@@ -15,13 +15,21 @@ class SocketService {
         });
 
         this.io.on('connection', (socket) => {
-            console.log('User connected:', socket.id);
+            console.log('[Socket] ✅ User connected. Socket ID:', socket.id);
 
             socket.on('join', (userId) => {
                 const room = String(userId);
                 this.users.set(room, socket.id);
                 socket.join(room); // Join a room explicitly named after userId for targeted messages
-                console.log(`User ${room} joined room ${room}`);
+                console.log(`[Socket] ✅ User/Shop ${room} joined room with socket ${socket.id}`);
+                
+                // Verify room membership
+                const roomMembers = this.io.sockets.adapter.rooms.get(room);
+                if (roomMembers) {
+                    console.log(`[Socket] ✅ Room '${room}' now has ${roomMembers.size} member(s)`);
+                } else {
+                    console.log(`[Socket] ⚠️ Room '${room}' join might have failed`);
+                }
             });
 
             // Typing indicators
@@ -38,10 +46,10 @@ class SocketService {
                 for (const [userId, socketId] of this.users.entries()) {
                     if (socketId === socket.id) {
                         this.users.delete(userId);
+                        console.log(`[Socket] ❌ User/Shop ${userId} disconnected from socket ${socket.id}`);
                         break;
                     }
                 }
-                console.log('User disconnected:', socket.id);
             });
         });
 
@@ -61,17 +69,20 @@ class SocketService {
         if (this.io) {
             const roomName = String(userId);
             console.log(`[Socket] Emitting '${event}' to room '${roomName}'`);
-            this.io.to(roomName).emit(event, data);
-
-            // Check if room has sockets
-            const room = this.io.sockets.adapter.rooms.get(userId.toString());
-            if (room) {
-                console.log(`[Socket] Room '${userId}' has ${room.size} sockets`);
+            
+            // Get room info before emitting
+            const room = this.io.sockets.adapter.rooms.get(roomName);
+            if (room && room.size > 0) {
+                console.log(`[Socket] ✅ Room '${roomName}' has ${room.size} socket(s)`);
+                this.io.to(roomName).emit(event, data);
             } else {
-                console.log(`[Socket] Room '${userId}' is empty or does not exist`);
+                console.log(`[Socket] ⚠️ Room '${roomName}' is empty or does not exist`);
+                console.log(`[Socket] Available rooms:`, Array.from(this.io.sockets.adapter.rooms.keys()));
+                // Still emit in case socket joins later
+                this.io.to(roomName).emit(event, data);
             }
         } else {
-            console.log('[Socket] IO not initialized');
+            console.log('[Socket] ❌ IO not initialized');
         }
     }
 

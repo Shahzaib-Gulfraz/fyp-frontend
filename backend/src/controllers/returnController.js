@@ -1,5 +1,8 @@
 const Return = require('../models/Return');
 const Order = require('../models/Order');
+const Notification = require('../models/Notification');
+const { io, getSocketId } = require('../socket/socketService');
+const { createNotification } = require('./notificationController');
 
 // @desc    Create return request
 // @route   POST /api/returns
@@ -54,6 +57,35 @@ exports.createReturnRequest = async (req, res) => {
         });
 
         await returnRequest.populate('orderId', 'orderNumber total');
+
+        // Create notification for shop owner
+        try {
+            const notification = await Notification.create({
+                userId: order.shopId, // Shop owner will receive notification
+                type: 'return_request',
+                title: 'New Return Request',
+                message: `Return request received for order ${order.orderNumber}`,
+                data: {
+                    returnId: returnRequest._id,
+                    orderId: order._id,
+                    orderNumber: order.orderNumber
+                }
+            });
+
+            // Send real-time notification via socket
+            const shopSocketId = getSocketId(order.shopId.toString());
+            if (shopSocketId) {
+                io.to(shopSocketId).emit('notification:new', {
+                    notification,
+                    unreadCount: await Notification.countDocuments({ 
+                        userId: order.shopId, 
+                        isRead: false 
+                    })
+                });
+            }
+        } catch (notifError) {
+            console.error('Failed to create return notification:', notifError);
+        }
 
         res.status(201).json({
             success: true,
@@ -139,6 +171,31 @@ exports.updateReturnStatus = async (req, res) => {
         }
 
         await returnRequest.save();
+
+        // Send notification to customer about return status update
+        try {
+            const statusMessages = {
+                approved: 'Your return request has been approved',
+                rejected: 'Your return request has been rejected',
+                completed: 'Your return has been completed and refund processed'
+            };
+
+            if (statusMessages[status]) {
+                await createNotification({
+                    userId: returnRequest.userId,
+                    type: 'return_update',
+                    title: 'Return Status Update',
+                    message: statusMessages[status],
+                    data: {
+                        returnId: returnRequest._id,
+                        orderId: returnRequest.orderId,
+                        status: status
+                    }
+                });
+            }
+        } catch (notifError) {
+            console.error('Failed to create return status notification:', notifError);
+        }
 
         res.json({
             success: true,

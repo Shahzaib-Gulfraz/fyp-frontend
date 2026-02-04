@@ -13,7 +13,7 @@ export interface ColorOption {
 }
 
 export interface ClothingItem {
-    id: string;
+    id?: string;
     name: string;
     brand: string;
     price: string;
@@ -21,7 +21,7 @@ export interface ClothingItem {
     discount?: string;
     rating: number;
     reviews: number;
-    image: string;
+    image: string | { url: string; publicId?: string };
     category: string;
     subcategory?: string;
     sizes: string[];

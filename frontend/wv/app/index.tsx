@@ -7,7 +7,7 @@ import { useAuth } from "../src/context/AuthContext";
 export default function PreSplash() {
   const router = useRouter();
   const { isDark, themeReady } = useTheme();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, userType, isLoading } = useAuth();
 
   const dot1 = useRef(new Animated.Value(0)).current;
   const dot2 = useRef(new Animated.Value(0)).current;
@@ -59,14 +59,28 @@ export default function PreSplash() {
     animations.current.forEach(anim => anim.start());
 
     const timer = setTimeout(() => {
-      router.replace("/splash");
+      // Always show splash screen for unauthenticated users
+      // This ensures QR code scanning shows splash -> login flow
+      if (!isAuthenticated) {
+        router.replace("/splash");
+        return;
+      }
+
+      // Redirect authenticated users based on user type
+      if (userType === 'shop') {
+        router.replace("/seller/dashboard");
+      } else if (userType === 'admin') {
+        router.replace("/(admin)/dashboard");
+      } else {
+        router.replace("/(main)/home");
+      }
     }, 2000);
 
     return () => {
       clearTimeout(timer);
       animations.current.forEach(anim => anim.stop());
     };
-  }, [themeReady, isLoading, router, dot1, dot2, dot3]);
+  }, [themeReady, isLoading, isAuthenticated, userType, router, dot1, dot2, dot3]);
 
   // 🔹 While loading auth/theme
   if (!themeReady || isLoading) {

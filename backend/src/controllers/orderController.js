@@ -3,6 +3,7 @@ const OrderItem = require('../models/OrderItem');
 const Product = require('../models/Product');
 const Shop = require('../models/Shop');
 const { createNotification } = require('./notificationController');
+const socketService = require('../socket/socketService');
 
 /**
  * @desc    Create new order
@@ -67,6 +68,16 @@ const createOrder = async (req, res) => {
                 refId: order._id,
                 refModel: 'Order',
                 text: `New order #${orderNumber} received! Total: $${total.toFixed(2)}`
+            });
+            
+            // Also emit a specific new_order event for dashboard stats update
+            socketService.emitToUser(shopId, 'new_order', {
+                order: {
+                    _id: order._id,
+                    orderNumber,
+                    total,
+                    status: 'pending'
+                }
             });
         } catch (notifError) {
             console.warn('Failed to send order notification:', notifError.message);
@@ -161,11 +172,7 @@ const getOrder = async (req, res) => {
             return res.status(403).json({ message: 'Not authorized' });
         }
 
-        // Get order items
-        const items = await OrderItem.find({ orderId: order._id })
-            .populate('productId', 'name thumbnail');
-
-        res.json({ order, items });
+        res.json({ order });
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
     }

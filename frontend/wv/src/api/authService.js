@@ -106,13 +106,19 @@ const authService = {
      */
     updateProfile: async (profileData) => {
         try {
+            console.log('[AuthService] Updating profile with data:', profileData);
             const response = await api.put('/auth/profile', profileData);
+            console.log('[AuthService] Profile update response:', response.data);
 
             // Update stored user data
-            await AsyncStorage.setItem('user', JSON.stringify(response.data.user));
+            if (response.data.user) {
+                await AsyncStorage.setItem('user', JSON.stringify(response.data.user));
+                console.log('[AuthService] User data saved to AsyncStorage');
+            }
 
             return response.data;
         } catch (_error) {
+            console.error('[AuthService] Profile update error:', _error);
             throw _error;
         }
     },
@@ -137,21 +143,48 @@ const authService = {
      */
     uploadAvatar: async (imageUri) => {
         try {
+            console.log('[AuthService] Uploading avatar from URI:', imageUri);
+            
             const formData = new FormData();
-            formData.append('image', {
-                uri: imageUri,
-                type: 'image/jpeg',
-                name: 'avatar.jpg',
-            });
+            
+            // Check if it's a blob URL (web) or file URI (native)
+            if (imageUri.startsWith('blob:')) {
+                // Web: Fetch the blob and convert to File
+                console.log('[AuthService] Detected blob URL, fetching blob data...');
+                const response = await fetch(imageUri);
+                const blob = await response.blob();
+                
+                // Create a proper File object for web
+                const filename = 'avatar-' + Date.now() + '.jpg';
+                const file = new File([blob], filename, { type: blob.type || 'image/jpeg' });
+                
+                console.log('[AuthService] Created file from blob:', filename, 'Type:', file.type, 'Size:', file.size);
+                formData.append('image', file);
+            } else {
+                // React Native: Use the original format
+                const filename = imageUri.split('/').pop();
+                const match = /\.(\w+)$/.exec(filename);
+                const type = match ? `image/${match[1]}` : `image/jpeg`;
+                
+                formData.append('image', {
+                    uri: imageUri,
+                    type: type,
+                    name: filename || 'avatar.jpg',
+                });
+            }
 
+            console.log('[AuthService] FormData prepared, sending request...');
+            
             const response = await api.post('/auth/avatar', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                 },
             });
 
+            console.log('[AuthService] Avatar upload response:', response.data);
             return response.data;
         } catch (_error) {
+            console.error('[AuthService] Avatar upload error:', _error);
             throw _error;
         }
     },

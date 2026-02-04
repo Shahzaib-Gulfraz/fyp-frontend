@@ -2,6 +2,7 @@ const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
 const User = require('../models/User');
 const socketService = require('../socket/socketService');
+const { createNotification } = require('./notificationController');
 
 /**
  * Chat Controller
@@ -13,11 +14,19 @@ exports.getConversations = async (req, res) => {
     try {
         const currentUserId = req.user._id;
 
+        // Fetch both friend conversations and shop conversations
         const conversations = await Conversation.find({
-            participants: currentUserId
+            $or: [
+                { participants: currentUserId }, // Friend conversations
+                { 
+                    conversationType: 'user-to-shop',
+                    participants: currentUserId // Shop conversations where user is participant
+                }
+            ]
         })
             .sort({ updatedAt: -1 })
             .populate('participants', 'username fullName profileImage')
+            .populate('shopId', 'shopName shopUsername logo')
             .populate('lastMessage.sender', 'username');
 
         res.status(200).json({
@@ -69,9 +78,21 @@ exports.getMessages = async (req, res) => {
         // Reset unread count for current user/shop
         if (conversation.unreadCount) {
             const entityId = (currentUserId || currentShopId).toString();
-            if (conversation.unreadCount.get(entityId) > 0) {
+            const currentCount = conversation.unreadCount.get(entityId) || 0;
+            console.log(`[getMessages] Current unread count for ${currentUserId ? 'user' : 'shop'} ${entityId}: ${currentCount}`);
+            
+            if (currentCount > 0) {
                 conversation.unreadCount.set(entityId, 0);
                 await conversation.save();
+                console.log(`[getMessages] ✅ Marked as read for ${entityId}, count reset from ${currentCount} to 0`);
+                
+                // Emit socket event to notify that messages were read
+                socketService.emitToUser(entityId, 'messages_read', { 
+                    conversationId: conversationId.toString(),
+                    previousCount: currentCount
+                });
+            } else {
+                console.log(`[getMessages] No unread messages for ${entityId}, skipping mark as read`);
             }
         }
 
@@ -91,6 +112,16 @@ exports.getMessages = async (req, res) => {
             messages.pop(); // Remove the extra message
         }
 
+        // Clean up messages - remove empty productMention objects
+        const cleanedMessages = messages.map(msg => {
+            const messageObj = msg.toObject();
+            // If productMention exists but has no productId, remove it
+            if (messageObj.productMention && !messageObj.productMention.productId) {
+                delete messageObj.productMention;
+            }
+            return messageObj;
+        });
+
         // Populate conversation participants to send back
         // We already found it above, but need to populate it if not already
         const conversationDetails = await Conversation.findById(conversationId)
@@ -100,7 +131,7 @@ exports.getMessages = async (req, res) => {
         res.status(200).json({
             success: true,
             data: {
-                messages,
+                messages: cleanedMessages,
                 conversation: conversationDetails,
                 hasMore
             }
@@ -219,6 +250,21 @@ exports.sendMessage = async (req, res) => {
 
         socketService.emitToUser(recipientId, 'new_message', messageData);
 
+        // 5. Create notification for recipient
+        try {
+            const sender = await User.findById(senderId);
+            await createNotification({
+                recipient: recipientId,
+                sender: senderId,
+                type: 'message',
+                refId: conversation._id,
+                refModel: 'Conversation',
+                text: `${sender.fullName || sender.username} sent you a message: "${text.substring(0, 30)}${text.length > 30 ? '...' : ''}"`
+            });
+        } catch (notifError) {
+            console.warn('Failed to create message notification:', notifError.message);
+        }
+
         res.status(201).json({
             success: true,
             data: { message, conversationId: conversation._id }
@@ -317,12 +363,19 @@ exports.getOrCreateShopConversation = async (req, res) => {
 exports.sendShopMessage = async (req, res) => {
     try {
         const { shopId } = req.params;
-        const { text, productId } = req.body;
+        const { text, productId, productMentionId } = req.body;
         const userId = req.user._id;
+
+        console.log('[sendShopMessage] Request body:', JSON.stringify(req.body));
+        console.log('[sendShopMessage] productId:', productId, 'productMentionId:', productMentionId);
 
         if (!text) {
             return res.status(400).json({ success: false, message: 'Message text is required' });
         }
+
+        // Support both productId and productMentionId
+        const mentionedProductId = productId || productMentionId;
+        console.log('[sendShopMessage] Final mentionedProductId:', mentionedProductId);
 
         // Find or create conversation
         let conversation = await Conversation.findOne({
@@ -348,15 +401,33 @@ exports.sendShopMessage = async (req, res) => {
         };
 
         // If product is mentioned, fetch and cache product details
-        if (productId) {
+        if (mentionedProductId) {
             const Product = require('../models/Product');
-            const product = await Product.findById(productId);
+            const product = await Product.findById(mentionedProductId);
 
             if (product) {
-                // Fix: Schema expects ObjectId, not an object. 
-                // If we want snapshot, we need to change Schema. 
-                // For now, store ID. populate() will handle retrieval.
-                messageData.productMention = product._id;
+                // Extract image URL properly - prefer thumbnail, fallback to first image
+                let productImageUrl = null;
+                if (product.thumbnail) {
+                    productImageUrl = typeof product.thumbnail === 'string' 
+                        ? product.thumbnail 
+                        : product.thumbnail.url;
+                } else if (product.images && product.images.length > 0) {
+                    const firstImage = product.images[0];
+                    productImageUrl = typeof firstImage === 'string' 
+                        ? firstImage 
+                        : firstImage.url;
+                }
+
+                // Store product details in proper schema structure
+                messageData.productMention = {
+                    productId: product._id,
+                    productName: product.name,
+                    productImage: productImageUrl,
+                    productPrice: product.price
+                };
+                
+                console.log('[sendShopMessage] Created productMention:', messageData.productMention);
             }
         }
 
@@ -381,29 +452,66 @@ exports.sendShopMessage = async (req, res) => {
 
         await conversation.save();
 
+        // Populate product mention if it exists
+        if (message.productMention) {
+            await message.populate('productMention');
+        }
+
         // Emit real-time notification to shop owner
         const Shop = require('../models/Shop');
         const shop = await Shop.findById(shopId);
+        
+        console.log('[sendShopMessage] Shop found:', shop ? shop._id : 'null', 'Emitting to shop:', shopId);
+        
         if (shop) {
             const messagePayload = {
                 _id: message._id,
                 conversationId: conversation._id,
                 text: message.text,
                 sender: userId,
-                productMention: message.productMention,
                 createdAt: message.createdAt,
                 unreadCount: currentShopUnread + 1 // Send updated count
             };
 
+            // Only include productMention if it exists and has productId
+            if (message.productMention?.productId) {
+                messagePayload.productMention = message.productMention;
+            }
+
             // Assume shop owner is listening on shopId room (if shop logic implemented) 
             // OR if shop has an owner user, emit to them.
             // For now, emit to shopId room which shop interface would join.
+            console.log('[sendShopMessage] Emitting new_message to shop:', shop._id.toString());
             socketService.emitToUser(shop._id, 'new_message', messagePayload);
+
+            // Create notification for shop
+            try {
+                const sender = await User.findById(userId);
+                await createNotification({
+                    recipient: shop._id,
+                    sender: userId,
+                    type: 'message',
+                    refId: conversation._id,
+                    refModel: 'Conversation',
+                    text: `${sender.fullName || sender.username} sent a message to your shop: "${text.substring(0, 30)}${text.length > 30 ? '...' : ''}"`
+                });
+            } catch (notifError) {
+                console.warn('Failed to create shop message notification:', notifError.message);
+            }
+        } else {
+            console.log('[sendShopMessage] Shop not found for ID:', shopId);
+        }
+
+        // Clean up message object before sending response
+        const messageResponse = message.toObject();
+        // Remove empty productMention if it has no productId
+        if (messageResponse.productMention && !messageResponse.productMention.productId) {
+            delete messageResponse.productMention;
         }
 
         res.status(201).json({
             success: true,
-            data: { message, conversationId: conversation._id }
+            data: { message: messageResponse, conversationId: conversation._id }
         });
 
     } catch (error) {
@@ -422,20 +530,59 @@ exports.sendShopMessage = async (req, res) => {
 exports.markConversationRead = async (req, res) => {
     try {
         const { conversationId } = req.body;
-        const userId = req.user._id;
+        
+        // Support both user and shop authentication
+        const userId = req.user?._id;
+        const shopId = req.shop?._id;
+        const actorId = userId || shopId;
 
         if (!conversationId) {
             return res.status(400).json({ success: false, message: 'Conversation ID is required' });
         }
 
-        const conversation = await Conversation.findOne({
-            _id: conversationId,
-            participants: userId
-        });
+        if (!actorId) {
+            return res.status(401).json({ success: false, message: 'Authentication required' });
+        }
 
-        if (conversation && conversation.unreadCount) {
-            conversation.unreadCount.set(userId.toString(), 0);
+        // For users: find by participant, for shops: find by shopId
+        let conversation;
+        if (userId) {
+            conversation = await Conversation.findOne({
+                _id: conversationId,
+                participants: userId
+            });
+            console.log(`[markConversationRead] Looking for user conversation: ${conversationId}, found:`, !!conversation);
+        } else if (shopId) {
+            conversation = await Conversation.findOne({
+                _id: conversationId,
+                shopId: shopId
+            });
+            console.log(`[markConversationRead] Looking for shop conversation: ${conversationId}, shopId: ${shopId}, found:`, !!conversation);
+        }
+
+        if (!conversation) {
+            console.log(`[markConversationRead] ❌ Conversation not found for ID: ${conversationId}`);
+            return res.status(404).json({ success: false, message: 'Conversation not found' });
+        }
+
+        if (conversation.unreadCount) {
+            const previousCount = conversation.unreadCount.get(actorId.toString()) || 0;
+            console.log(`[markConversationRead] Current unreadCount for ${actorId}:`, previousCount);
+            
+            conversation.unreadCount.set(actorId.toString(), 0);
             await conversation.save();
+
+            console.log(`[markConversationRead] ✅ Marked as read for ${userId ? 'user' : 'shop'} ${actorId}. Previous count: ${previousCount}`);
+
+            // Emit socket event to notify about read status
+            socketService.emitToUser(actorId, 'messages_read', { 
+                conversationId: conversationId.toString(),
+                shopId: shopId?.toString(),
+                userId: userId?.toString(),
+                previousCount 
+            });
+        } else {
+            console.log(`[markConversationRead] ⚠️ No unreadCount map found in conversation`);
         }
 
         res.status(200).json({ success: true });
@@ -500,11 +647,14 @@ exports.getAllShopConversations = async (req, res) => {
             conversationType: 'user-to-shop'
         })
             .sort({ updatedAt: -1 })
-            .populate('participants', 'username fullName profileImage'); // The User
+            .populate('participants', 'username fullName profileImage') // The User
+            .populate('lastMessage'); // Populate last message
 
         console.log(`B-DEBUG: Found ${conversations.length} conversations for shop ${shopId}`);
         if (conversations.length > 0) {
             console.log('B-DEBUG: First convo:', conversations[0]._id);
+            console.log('B-DEBUG: First convo unreadCount:', conversations[0].unreadCount);
+            console.log(`B-DEBUG: Shop ${shopId} unread in first convo:`, conversations[0].unreadCount?.get?.(shopId) || conversations[0].unreadCount?.[shopId] || 0);
         } else {
             // Debug check: find ANY shop conversation to see if data exists
             const sample = await Conversation.findOne({ conversationType: 'user-to-shop' });
@@ -574,7 +724,7 @@ exports.replyToShopConversation = async (req, res) => {
 
         await conversation.save();
 
-        // Emit Socket Event to User
+        // Emit Socket Event to User and Shop
         const messageData = {
             _id: message._id,
             conversationId: conversation._id,
@@ -584,9 +734,31 @@ exports.replyToShopConversation = async (req, res) => {
             isShopReply: true
         };
 
-        // Use require here to avoid circular dep issues if any
-        // socketService is already required at top level though.
+        console.log('[replyToShopConversation] Emitting to customer:', recipientId.toString());
+        console.log('[replyToShopConversation] Emitting to shop:', conversation.shopId.toString());
+        console.log('[replyToShopConversation] Conversation ID:', conversation._id.toString());
+
+        // Emit to customer
         socketService.emitToUser(recipientId, 'new_message', messageData);
+        
+        // Also emit to shop owner (so they see their own message in real-time)
+        socketService.emitToUser(conversation.shopId, 'new_message', messageData);
+
+        // Create notification for customer
+        try {
+            const Shop = require('../models/Shop');
+            const shop = await Shop.findById(conversation.shopId);
+            await createNotification({
+                recipient: recipientId,
+                sender: conversation.shopId,
+                type: 'message',
+                refId: conversation._id,
+                refModel: 'Conversation',
+                text: `${shop.shopName} replied: "${text.substring(0, 30)}${text.length > 30 ? '...' : ''}"`
+            });
+        } catch (notifError) {
+            console.warn('Failed to create shop reply notification:', notifError.message);
+        }
 
         res.status(201).json({
             success: true,

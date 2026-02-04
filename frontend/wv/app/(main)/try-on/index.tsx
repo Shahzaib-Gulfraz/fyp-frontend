@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import * as ImagePicker from 'expo-image-picker';
+import Toast from 'react-native-toast-message';
 
 import { useTheme } from "@/src/context/ThemeContext";
 import tryOnService from "@/src/api/tryOnService";
@@ -18,7 +19,7 @@ import SavedItemsSection from "./components/SavedItemsSection";
 import TryOnHistory from "./components/TryOnHistory";
 
 import { ClothingItem, TryOnHistoryItem } from "./types";
-import { Camera, Image as ImageIcon, Sparkles } from "lucide-react-native";
+import { Camera, Image as ImageIcon, Sparkles, CheckCircle } from "lucide-react-native";
 
 const TryOnScreen = () => {
   const router = useRouter();
@@ -41,6 +42,8 @@ const TryOnScreen = () => {
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [fullSizeImage, setFullSizeImage] = useState<string | null>(null);
+  const [cartCount, setCartCount] = useState(0);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
 
   const currentItem = selectedClothing;
 
@@ -64,6 +67,24 @@ const TryOnScreen = () => {
         // Map saved items to ClothingItem
         items = response.data.map((saved: any) => {
           const p = saved.product || saved.productId;
+          
+          // Extract sizes and colors from specifications if available
+          let sizes = p.sizes || [];
+          let colors = p.colors || [];
+          
+          if (p.specifications) {
+            if (p.specifications.size) {
+              sizes = Array.isArray(p.specifications.size) ? p.specifications.size : [p.specifications.size];
+            }
+            if (p.specifications.color) {
+              colors = Array.isArray(p.specifications.color) ? p.specifications.color : [p.specifications.color];
+            }
+          }
+          
+          // Default fallbacks
+          if (sizes.length === 0) sizes = ['S', 'M', 'L', 'XL'];
+          if (colors.length === 0) colors = ['black', 'white'];
+          
           return {
             id: p._id,
             _id: p._id,
@@ -72,8 +93,8 @@ const TryOnScreen = () => {
             price: `$${p.price}`,
             image: p.thumbnail?.url || p.images?.[0]?.url || 'https://placehold.co/200x200',
             description: p.description,
-            sizes: p.sizes || ['S', 'M', 'L', 'XL'],
-            colors: p.colors || ['black', 'white']
+            sizes,
+            colors
           };
         });
       }
@@ -83,18 +104,37 @@ const TryOnScreen = () => {
         const productsResponse = await productService.getProducts({ limit: 10, tryon: true });
 
         if (productsResponse?.products && productsResponse.products.length > 0) {
-          const randomProducts = productsResponse.products.map((p: any) => ({
-            id: p._id,
-            _id: p._id,
-            name: p.name,
-            brand: p.brand || 'WearVirtually',
-            price: `$${p.price}`,
-            image: p.thumbnail?.url || p.images?.[0]?.url || 'https://placehold.co/200x200',
-            description: p.description,
-            sizes: p.sizes || ['S', 'M', 'L', 'XL'],
-            colors: p.colors || ['black', 'white'],
-            tryon: p.tryon
-          }));
+          const randomProducts = productsResponse.products.map((p: any) => {
+            // Extract sizes and colors from specifications if available
+            let sizes = p.sizes || [];
+            let colors = p.colors || [];
+            
+            if (p.specifications) {
+              if (p.specifications.size) {
+                sizes = Array.isArray(p.specifications.size) ? p.specifications.size : [p.specifications.size];
+              }
+              if (p.specifications.color) {
+                colors = Array.isArray(p.specifications.color) ? p.specifications.color : [p.specifications.color];
+              }
+            }
+            
+            // Default fallbacks
+            if (sizes.length === 0) sizes = ['S', 'M', 'L', 'XL'];
+            if (colors.length === 0) colors = ['black', 'white'];
+            
+            return {
+              id: p._id,
+              _id: p._id,
+              name: p.name,
+              brand: p.brand || 'WearVirtually',
+              price: `$${p.price}`,
+              image: p.thumbnail?.url || p.images?.[0]?.url || 'https://placehold.co/200x200',
+              description: p.description,
+              sizes,
+              colors,
+              tryon: p.tryon
+            };
+          });
           
           // Combine saved items with random products (avoiding duplicates)
           const savedIds = items.map(i => i.id);
@@ -110,6 +150,13 @@ const TryOnScreen = () => {
       // Auto-select first item if no product was passed via params
       if (!initialProduct && items.length > 0) {
         setSelectedClothing(items[0]);
+        // Auto-select first size and color
+        if (items[0].sizes && items[0].sizes.length > 0) {
+          setSelectedSize(items[0].sizes[0]);
+        }
+        if (items[0].colors && items[0].colors.length > 0) {
+          setSelectedColor(items[0].colors[0]);
+        }
       }
     } catch (_error) {
       console.log("Failed to fetch saved items", _error);
@@ -141,7 +188,30 @@ const TryOnScreen = () => {
   useEffect(() => {
     fetchHistory();
     fetchSavedItems();
+    fetchCartCount();
+    
+    // Auto-select size and color for initial product from params
+    if (initialProduct) {
+      if (initialProduct.sizes && initialProduct.sizes.length > 0) {
+        setSelectedSize(initialProduct.sizes[0]);
+      }
+      if (initialProduct.colors && initialProduct.colors.length > 0) {
+        setSelectedColor(initialProduct.colors[0]);
+      }
+    }
   }, [fetchHistory, fetchSavedItems]);
+
+  const fetchCartCount = async () => {
+    try {
+      const response = await cartService.getCart();
+      if (response?.cart?.items) {
+        const totalItems = response.cart.items.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
+        setCartCount(totalItems);
+      }
+    } catch (error) {
+      console.log('Failed to fetch cart count:', error);
+    }
+  };
 
   /* ─────────────────────────────
      Handlers
@@ -151,7 +221,7 @@ const TryOnScreen = () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         // @ts-ignore
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [3, 4],
         quality: 0.8,
@@ -242,6 +312,15 @@ const TryOnScreen = () => {
   const handleTryOnItem = (item: ClothingItem) => {
     setSelectedClothing(item);
     setResultImage(null); // Reset result when changing item
+    
+    // Auto-select first size and color
+    if (item.sizes && item.sizes.length > 0) {
+      setSelectedSize(item.sizes[0]);
+    }
+    if (item.colors && item.colors.length > 0) {
+      setSelectedColor(item.colors[0]);
+    }
+    
     Alert.alert("Selected", `Selected ${item.name}`);
   };
 
@@ -251,39 +330,88 @@ const TryOnScreen = () => {
   };
 
   const handleAddToCart = async () => {
+    console.log('=== ADD TO CART DEBUG ===');
+    console.log('Current Item:', currentItem);
+    console.log('Selected Size:', selectedSize);
+    console.log('Selected Color:', selectedColor);
+    
     if (!currentItem) {
       Alert.alert("Error", "Please select a product first");
       return;
     }
 
-    // Validate size and color selection
-    if (!selectedSize) {
+    // Extract productId
+    const productId = String((currentItem as any)._id || currentItem.id);
+    console.log('Product ID:', productId);
+
+    // Check if product has sizes/colors requirements
+    const hasSizes = currentItem.sizes && currentItem.sizes.length > 0;
+    const hasColors = currentItem.colors && currentItem.colors.length > 0;
+
+    console.log('Has Sizes:', hasSizes, 'Has Colors:', hasColors);
+
+    // Validate only if product has these options
+    if (hasSizes && !selectedSize) {
       Alert.alert("Size Required", "Please select a size before adding to cart");
       return;
     }
 
-    if (!selectedColor) {
+    if (hasColors && !selectedColor) {
       Alert.alert("Color Required", "Please select a color before adding to cart");
       return;
     }
 
     try {
-      // Extract productId as a string
-      const productId = String((currentItem as any)._id || currentItem.id);
+      // Build selected options object
+      const selectedOptions: any = {};
+      if (selectedSize) selectedOptions.size = selectedSize;
+      if (selectedColor) selectedOptions.color = selectedColor;
 
-      console.log('Adding to cart:', { productId, size: selectedSize, color: selectedColor });
-
-      // Call with separate parameters: productId, quantity, selectedOptions
-      await cartService.addToCart(
+      console.log('Calling cartService.addToCart with:', {
         productId,
-        1,
-        { size: selectedSize, color: selectedColor }
-      );
+        quantity: 1,
+        selectedOptions
+      });
 
-      Alert.alert("Success", "Product added to cart!");
+      await cartService.addToCart(productId, 1, selectedOptions);
+
+      console.log('✅ Successfully added to cart');
+      
+      // Update cart count
+      await fetchCartCount();
+      
+      // Show success message
+      setShowSuccessMessage(true);
+      setTimeout(() => setShowSuccessMessage(false), 3000);
+      
+      // Also show toast
+      Toast.show({
+        type: 'success',
+        text1: 'Added to Cart! 🛒',
+        text2: `${currentItem.name} has been added to your cart`,
+        position: 'bottom',
+        visibilityTime: 3000,
+      });
+      
+      if (Platform.OS === 'web') {
+        // For web, also show alert as fallback
+        setTimeout(() => {
+          alert('Product added to cart successfully!');
+        }, 100);
+      }
     } catch (error: any) {
-      console.error('Add to cart error:', error);
-      Alert.alert("Error", error.message || "Failed to add to cart");
+      console.error('❌ Add to cart error:', error);
+      console.error('Error details:', error.response?.data || error.message);
+      
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: error.response?.data?.message || error.message || "Failed to add to cart",
+        position: 'bottom',
+        visibilityTime: 3000,
+      });
+      
+      Alert.alert("Error", error.response?.data?.message || error.message || "Failed to add to cart");
     }
   };
 
@@ -311,6 +439,37 @@ const TryOnScreen = () => {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <StatusBar style={isDark ? "light" : "dark"} />
+
+      {/* Success Message Banner */}
+      {showSuccessMessage && (
+        <View style={{
+          position: 'absolute',
+          top: 10,
+          left: 20,
+          right: 20,
+          backgroundColor: '#4CAF50',
+          borderRadius: 12,
+          padding: 16,
+          flexDirection: 'row',
+          alignItems: 'center',
+          zIndex: 9999,
+          elevation: 10,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.25,
+          shadowRadius: 3.84,
+        }}>
+          <CheckCircle size={24} color="#fff" />
+          <View style={{ marginLeft: 12, flex: 1 }}>
+            <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>
+              Added to Cart! 🛒
+            </Text>
+            <Text style={{ color: '#fff', fontSize: 13, marginTop: 2 }}>
+              {currentItem?.name} ({cartCount} items in cart)
+            </Text>
+          </View>
+        </View>
+      )}
 
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
@@ -561,6 +720,9 @@ const TryOnScreen = () => {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
+
+      {/* Toast Message Component */}
+      <Toast />
     </SafeAreaView>
   );
 };

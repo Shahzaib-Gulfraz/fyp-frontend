@@ -22,12 +22,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
             const token = await AsyncStorage.getItem('authToken');
             const type = await AsyncStorage.getItem('userType') as "user" | "shop" | "admin" | null;
+            const sessionTimestamp = await AsyncStorage.getItem('sessionTimestamp');
 
             const hasToken = !!token;
-            console.log('🔍 AuthContext: checkAuth result:', { hasToken, type, token: token ? 'EXISTS' : 'MISSING' });
+            console.log('🔍 AuthContext: checkAuth result:', { hasToken, type, token: token ? 'EXISTS' : 'MISSING', sessionTimestamp });
 
-            setIsAuthenticated(hasToken);
-            setUserType(type);
+            // Check if session is valid (not expired)
+            let isSessionValid = false;
+            if (hasToken && sessionTimestamp) {
+                const lastLoginTime = parseInt(sessionTimestamp, 10);
+                const currentTime = Date.now();
+                const sessionDuration = 0; // No auto-login - require fresh login every time
+                
+                isSessionValid = (currentTime - lastLoginTime) < sessionDuration;
+                console.log('🔍 Session check:', { 
+                    lastLoginTime: new Date(lastLoginTime).toISOString(), 
+                    currentTime: new Date(currentTime).toISOString(),
+                    isValid: isSessionValid 
+                });
+            }
+
+            // Only authenticate if token exists AND session is valid
+            if (hasToken && isSessionValid) {
+                setIsAuthenticated(true);
+                setUserType(type);
+            } else {
+                // Session expired or no session - clear everything
+                if (hasToken && !isSessionValid) {
+                    console.log('⏰ Session expired - clearing auth data');
+                    await AsyncStorage.removeItem('authToken');
+                    await AsyncStorage.removeItem('user');
+                    await AsyncStorage.removeItem('userType');
+                    await AsyncStorage.removeItem('shop');
+                    await AsyncStorage.removeItem('sessionTimestamp');
+                }
+                setIsAuthenticated(false);
+                setUserType(null);
+            }
         } catch (error) {
             console.error('AuthContext: Error checking auth:', error);
             setIsAuthenticated(false);
@@ -44,8 +75,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
             if (authenticated && type) {
                 await AsyncStorage.setItem('userType', type);
+                // Store session timestamp when user logs in
+                await AsyncStorage.setItem('sessionTimestamp', Date.now().toString());
+                console.log('✅ Session timestamp saved:', new Date().toISOString());
             } else {
                 await AsyncStorage.removeItem('userType');
+                await AsyncStorage.removeItem('sessionTimestamp');
             }
         } catch (error) {
             console.error('AuthContext: Error saving userType:', error);
@@ -58,6 +93,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             await AsyncStorage.removeItem('authToken');
             await AsyncStorage.removeItem('user');
             await AsyncStorage.removeItem('userType');
+            await AsyncStorage.removeItem('shop'); // Also clear shop data for seller logout
+            await AsyncStorage.removeItem('sessionTimestamp'); // Clear session timestamp
             setAuthenticated(false, null);
         } catch (error) {
             console.error('AuthContext: Logout error:', error);

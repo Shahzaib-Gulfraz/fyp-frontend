@@ -7,7 +7,7 @@ import {
   Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useRouter, usePathname, Slot } from "expo-router";
+import { useRouter, usePathname, Slot, useFocusEffect } from "expo-router";
 import {
   Home as HomeIcon,
   Search,
@@ -19,9 +19,11 @@ import {
   Newspaper,
   Users,
 } from "lucide-react-native";
-import { useRef } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import { useTheme } from "@/src/context/ThemeContext";
 import { useUser } from "@/src/context/UserContext";
+import { useSocket } from "@/src/context/SocketContext";
+import { chatService } from "@/src/api/chatService";
 
 export default function MainLayout() {
   const insets = useSafeAreaInsets();
@@ -30,6 +32,9 @@ export default function MainLayout() {
   const { theme } = useTheme();
   const { colors } = theme;
   const { user } = useUser();
+  const { socket } = useSocket();
+
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0);
 
   const isShopOwner = user?.role === "shop_owner";
 
@@ -38,6 +43,72 @@ export default function MainLayout() {
       .fill(0)
       .map(() => new Animated.Value(1))
   ).current;
+
+  // Fetch unread message count
+  const fetchUnreadCount = useCallback(async () => {
+    if (!user?.id) return;
+    
+    try {
+      const response = await chatService.getConversations();
+      const conversations = response.data?.data?.conversations || response.data?.conversations || [];
+      
+      // Calculate total unread messages
+      let totalUnread = 0;
+      conversations.forEach((conv: any) => {
+        if (conv.unreadCount && user?.id) {
+          const count = conv.unreadCount[user.id] || 0;
+          totalUnread += count;
+        }
+      });
+      
+      console.log('[Footer] Total unread messages:', totalUnread);
+      setUnreadMessageCount(totalUnread);
+    } catch (error) {
+      console.error('Failed to fetch unread count:', error);
+    }
+  }, [user?.id]);
+
+  // Use focus effect to refresh count when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchUnreadCount();
+    }, [fetchUnreadCount])
+  );
+
+  // Real-time updates
+  useEffect(() => {
+    if (!socket || !user?.id) return;
+
+    const handleNewMessage = (data: any) => {
+      console.log('[Footer] New message received:', data);
+      // Only increment if the message is NOT from the current user
+      if (data.sender && data.sender !== user.id && data.sender !== user._id && String(data.sender) !== String(user.id)) {
+        setUnreadMessageCount(prev => {
+          const newCount = prev + 1;
+          console.log('[Footer] Incrementing count from', prev, 'to:', newCount);
+          return newCount;
+        });
+      } else {
+        console.log('[Footer] Message from self, not incrementing. Sender:', data.sender, 'User:', user.id);
+      }
+    };
+
+    const handleMessageRead = (data: any) => {
+      console.log('[Footer] Messages marked as read:', data);
+      // Refresh count when messages are marked as read
+      fetchUnreadCount();
+    };
+
+    socket.on('new_message', handleNewMessage);
+    socket.on('message:new', handleNewMessage);
+    socket.on('messages_read', handleMessageRead);
+
+    return () => {
+      socket.off('new_message', handleNewMessage);
+      socket.off('message:new', handleNewMessage);
+      socket.off('messages_read', handleMessageRead);
+    };
+  }, [socket, user?.id, user?._id, fetchUnreadCount]);
 
   const userFooterTabs = [
     { id: "home", icon: HomeIcon, route: "/home" },
@@ -144,7 +215,7 @@ export default function MainLayout() {
                     color={getIconColor(isActive)}
                   />
 
-                  {tab.id === "chats" && (
+                  {tab.id === "chats" && unreadMessageCount > 0 && (
                     <View
                       style={[
                         styles.chatBadge,
@@ -154,7 +225,9 @@ export default function MainLayout() {
                         },
                       ]}
                     >
-                      <Text style={styles.chatBadgeText}>3</Text>
+                      <Text style={styles.chatBadgeText}>
+                        {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
+                      </Text>
                     </View>
                   )}
                 </Animated.View>

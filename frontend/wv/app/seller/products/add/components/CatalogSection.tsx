@@ -15,7 +15,6 @@ import { useTheme } from '@/src/context/ThemeContext';
 import { appTheme } from '@/src/theme/appTheme';
 import ProductCardItem from './ProductCardItem';
 import { useRouter } from 'expo-router';
-import { MOCK_CLOTHING_ITEMS } from '../data/mockData';
 
 import { productService } from '@/src/api/productService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -255,11 +254,10 @@ const CatalogSection: React.FC<CatalogSectionProps> = ({ onEditProduct }) => {
       <ProductCardItem
         viewMode={viewMode}
         product={{
-        id: item._id,
         name: item.name,
         brand: item.brand || 'No Brand',
         price: `$${item.price}`,
-        category: item.category,
+        category: item.category?.name || item.category || 'Uncategorized',
         subcategory: item.subcategory,
         image: item.thumbnail?.url || 'https://placehold.co/400x600',
         sizes: item.sizes || [],
@@ -273,29 +271,6 @@ const CatalogSection: React.FC<CatalogSectionProps> = ({ onEditProduct }) => {
         }}
         onEdit={() => onEditProduct(item)}
         onDelete={() => handleDelete(item._id)}
-        onPreview={() => {
-          const productForPreview = {
-            id: item._id,
-            name: item.name,
-            brand: item.brand || 'No Brand',
-            price: `$${item.price}`,
-            category: item.category,
-            subcategory: item.subcategory,
-            image: item.thumbnail?.url || 'https://placehold.co/400x600',
-            sizes: item.sizes || [],
-            colors: item.colors || [],
-            rating: item.stats?.rating || 0,
-            reviews: item.stats?.reviewsCount || 0,
-            isLiked: false,
-            description: item.description,
-            materials: item.material,
-            care: item.careInstructions
-          };
-          router.push({
-            pathname: '/(main)/try-on',
-            params: { product: JSON.stringify(productForPreview) }
-          });
-        }}
       />
     </View>
   );

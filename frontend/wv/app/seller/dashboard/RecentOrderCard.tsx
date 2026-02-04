@@ -100,7 +100,7 @@ const RecentOrderCard: React.FC<RecentOrderCardProps> = ({
       {/* Product Info */}
       <View style={styles.productInfo}>
         <Image
-          source={{ uri: typeof productImage === 'string' ? productImage : productImage?.url || 'https://via.placeholder.com/50' }}
+          source={{ uri: typeof productImage === 'string' ? productImage : (productImage as { url?: string })?.url || 'https://via.placeholder.com/50' }}
           style={[styles.productImage, { borderRadius: radius.sm }]}
           resizeMode="cover"
         />

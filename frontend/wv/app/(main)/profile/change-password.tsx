@@ -22,6 +22,8 @@ import {
 } from "lucide-react-native";
 import React, { useState } from "react";
 import { useTheme } from "@/src/context/ThemeContext";
+import authService from "@/src/api/authService";
+import Toast from "react-native-toast-message";
 
 export default function ChangePasswordScreen() {
   const { theme, isDark } = useTheme();
@@ -77,16 +79,43 @@ export default function ChangePasswordScreen() {
     setIsLoading(true);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      Alert.alert(
-        "Success",
-        "Password changed successfully!",
-        [{ text: "OK", onPress: () => router.back() }]
+      await authService.changePassword(
+        formData.currentPassword,
+        formData.newPassword
       );
-    } catch {
-      Alert.alert("Error", "Failed to change password. Please try again.");
+
+      Toast.show({
+        type: 'success',
+        text1: 'Success',
+        text2: 'Password changed successfully!',
+        position: 'top',
+        visibilityTime: 3000,
+      });
+
+      // Clear form
+      setFormData({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+
+      // Navigate back after a delay
+      setTimeout(() => {
+        router.back();
+      }, 1500);
+
+    } catch (error: any) {
+      console.error('Change password error:', error);
+      
+      const errorMessage = error.response?.data?.message || 'Failed to change password. Please try again.';
+      
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: errorMessage,
+        position: 'top',
+        visibilityTime: 3000,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -281,6 +310,8 @@ export default function ChangePasswordScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <Toast />
     </SafeAreaView>
   );
 }

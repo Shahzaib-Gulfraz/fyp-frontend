@@ -47,7 +47,7 @@ const BannerFormModal: React.FC<BannerFormModalProps> = ({ visible, onDismiss, o
     const pickImage = async () => {
         try {
             const result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                mediaTypes: ['images'],
                 allowsEditing: true,
                 aspect: [16, 9], // Banner aspect ratio
                 quality: 0.8,

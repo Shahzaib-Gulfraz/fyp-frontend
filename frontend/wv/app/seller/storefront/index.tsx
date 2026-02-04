@@ -55,7 +55,7 @@ export default function StorefrontSettingsScreen() {
 
     const pickImage = async (type: 'logo' | 'banner') => {
         const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            mediaTypes: ['images'],
             allowsEditing: true,
             aspect: type === 'logo' ? [1, 1] : [16, 9],
             quality: 0.8,
@@ -114,7 +114,7 @@ export default function StorefrontSettingsScreen() {
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
             {/* Header */}
             <View style={[styles.header, { borderBottomColor: colors.border }]}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                <TouchableOpacity onPress={() => router.replace('/seller/dashboard')} style={styles.backButton}>
                     <ArrowLeft size={24} color={colors.text} />
                 </TouchableOpacity>
                 <Text style={[styles.headerTitle, { color: colors.text }]}>Storefront Settings</Text>

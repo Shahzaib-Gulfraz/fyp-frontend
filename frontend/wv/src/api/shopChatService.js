@@ -26,10 +26,18 @@ const shopChatService = {
      */
     sendMessage: async (shopId, text, productId = null) => {
         try {
-            const response = await api.post(`/chat/shop/${shopId}/message`, {
-                text,
-                productMentionId: productId
-            });
+            const payload = { text };
+            
+            // Only include productMentionId if it's provided and truthy
+            if (productId) {
+                payload.productMentionId = productId;
+                console.log('[shopChatService] Sending with product:', productId);
+            } else {
+                console.log('[shopChatService] Sending without product reference');
+            }
+            
+            console.log('[shopChatService] Final payload:', JSON.stringify(payload));
+            const response = await api.post(`/chat/shop/${shopId}/message`, payload);
             return response.data;
         } catch (error) {
             throw error.response?.data || error;

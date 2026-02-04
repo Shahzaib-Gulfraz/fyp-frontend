@@ -7,14 +7,41 @@ const socketService = require('../socket/socketService');
  */
 exports.createNotification = async (data) => {
     try {
-        const notification = new Notification(data);
+        // Determine recipient model (User or Shop)
+        const Shop = require('../models/Shop');
+        const User = require('../models/User');
+        
+        let recipientModel = 'User';
+        let senderModel = 'User';
+        
+        // Check if recipient is a shop
+        if (data.recipient) {
+            const isShop = await Shop.findById(data.recipient);
+            if (isShop) {
+                recipientModel = 'Shop';
+            }
+        }
+        
+        // Check if sender is a shop
+        if (data.sender) {
+            const isShopSender = await Shop.findById(data.sender);
+            if (isShopSender) {
+                senderModel = 'Shop';
+            }
+        }
+
+        const notification = new Notification({
+            ...data,
+            recipientModel,
+            senderModel
+        });
         await notification.save();
 
         // Emit real-time event if socket is available
         try {
             const io = socketService.getIO();
             if (io) {
-                // Assuming we join rooms by userId
+                // Assuming we join rooms by userId/shopId
                 io.to(data.recipient.toString()).emit('notification:new', notification);
             }
         } catch (socketError) {

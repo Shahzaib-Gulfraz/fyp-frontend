@@ -180,6 +180,8 @@ const shopService = {
      */
     updateShop: async (shopId, shopData, images = {}) => {
         try {
+            console.log('updateShop called with:', { shopId, hasLogo: !!images.logo, hasBanner: !!images.banner });
+            
             const formData = new FormData();
 
             // Add text fields
@@ -196,7 +198,7 @@ const shopService = {
 
             // Add logo
             if (images.logo && !images.logo.startsWith('http')) {
-                console.log('F-DEBUG: Uploading new logo:', images.logo);
+                console.log('Adding logo to formData:', images.logo);
 
                 const isWebOrBlob = Platform.OS === 'web' || (typeof images.logo === 'string' && images.logo.startsWith('blob:'));
 
@@ -205,8 +207,13 @@ const shopService = {
                     const blob = await response.blob();
                     formData.append('logo', blob, 'logo.jpg');
                 } else {
+                    // Native: Clean URI for Android
+                    const cleanUri = Platform.OS === 'android' && !images.logo.startsWith('file://') 
+                        ? images.logo 
+                        : images.logo;
+                        
                     formData.append('logo', {
-                        uri: images.logo,
+                        uri: cleanUri,
                         type: 'image/jpeg',
                         name: 'logo.jpg',
                     });
@@ -215,7 +222,7 @@ const shopService = {
 
             // Add banner
             if (images.banner && !images.banner.startsWith('http')) {
-                console.log('F-DEBUG: Uploading new banner:', images.banner);
+                console.log('Adding banner to formData:', images.banner);
 
                 const isWebOrBlob = Platform.OS === 'web' || (typeof images.banner === 'string' && images.banner.startsWith('blob:'));
 
@@ -224,15 +231,30 @@ const shopService = {
                     const blob = await response.blob();
                     formData.append('banner', blob, 'banner.jpg');
                 } else {
+                    const cleanUri = Platform.OS === 'android' && !images.banner.startsWith('file://') 
+                        ? images.banner 
+                        : images.banner;
+                        
                     formData.append('banner', {
-                        uri: images.banner,
+                        uri: cleanUri,
                         type: 'image/jpeg',
                         name: 'banner.jpg',
                     });
                 }
             }
 
-            const response = await api.put(`/shops/${shopId}`, formData);
+            console.log('Sending PUT request to /shops/' + shopId);
+            
+            const response = await api.put(`/shops/${shopId}`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+                transformRequest: (data, headers) => {
+                    return data; // Prevent Axios from stringifying FormData
+                }
+            });
+
+            console.log('Update successful:', response.data);
 
             // Update local storage if shop data returned
             if (response.data.shop) {
@@ -241,6 +263,7 @@ const shopService = {
 
             return response.data;
         } catch (error) {
+            console.error('updateShop error:', error);
             throw error;
         }
     },

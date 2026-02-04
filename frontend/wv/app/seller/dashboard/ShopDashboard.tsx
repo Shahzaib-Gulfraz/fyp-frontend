@@ -23,29 +23,23 @@ import {
   Users,
   TrendingUp,
   Plus,
-  Settings,
   Bell,
-  MessageCircle, // Added MessageCircle
-  Truck,
+  MessageCircle,
   AlertCircle,
-  ArrowUpRight,
   LogOut,
-  Search,
+  User,
 } from 'lucide-react-native';
 
 import { useTheme } from '@/src/context/ThemeContext';
 import { useAuth } from '@/src/context/AuthContext';
-import { useSocket } from '@/src/context/SocketContext'; // NEW Import
-import { appTheme } from '@/src/theme/appTheme';
+import { useSocket } from '@/src/context/SocketContext';
 import shopService from '@/src/api/shopService';
+import RecentOrderCard from './RecentOrderCard';
 
 LogBox.ignoreLogs([
   'Invalid DOM property `transform-origin`',
   'TouchableMixin is deprecated',
 ]);
-
-import StatCard from './StatCard';
-import RecentOrderCard from './RecentOrderCard';
 // ManagementItem removed - not used
 
 const { width } = Dimensions.get('window');
@@ -55,16 +49,15 @@ const ShopDashboard: React.FC = () => {
   const { logout, isAuthenticated, userType, checkAuth } = useAuth();
   // Live socket data
   const {
+    socket,
     unreadNotifications, setUnreadNotifications,
     unreadMessages, setUnreadMessages
   } = useSocket();
 
-  const { spacing, radius, fonts } = appTheme.tokens;
   const router = useRouter();
 
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [selectedPeriod, setSelectedPeriod] = useState<'today' | 'week' | 'month'>('week');
 
   // Real Data State
   const [stats, setStats] = useState({
@@ -77,7 +70,7 @@ const ShopDashboard: React.FC = () => {
     unreadNotifications: 0 // NEW
   });
   const [recentOrders, setRecentOrders] = useState([]);
-  const [lowStockProducts, setLowStockProducts] = useState([]);
+  const [lowStockProducts] = useState([]);
 
   const loadDashboardData = useCallback(async () => {
     try {
@@ -114,11 +107,50 @@ const ShopDashboard: React.FC = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [isAuthenticated, userType, checkAuth]);
+  }, [isAuthenticated, userType, checkAuth, setUnreadMessages, setUnreadNotifications]);
 
   useEffect(() => {
     loadDashboardData();
   }, [loadDashboardData]);
+
+  // Listen for real-time message updates
+  useEffect(() => {
+    if (socket) {
+      const handleNewMessage = () => {
+        console.log('[Dashboard] New message received, incrementing count');
+        setUnreadMessages(prev => prev + 1);
+      };
+
+      const handleNewNotification = () => {
+        console.log('[Dashboard] New notification received, incrementing count');
+        setUnreadNotifications(prev => prev + 1);
+      };
+
+      const handleNewOrder = (data: any) => {
+        console.log('[Dashboard] New order received:', data);
+        // Increment pending orders and refresh data
+        setStats(prev => ({
+          ...prev,
+          pendingOrders: prev.pendingOrders + 1,
+          orders: prev.orders + 1
+        }));
+        // Also trigger notification increment
+        setUnreadNotifications(prev => prev + 1);
+      };
+
+      socket.on('new_message', handleNewMessage);
+      socket.on('message:new', handleNewMessage);
+      socket.on('notification:new', handleNewNotification);
+      socket.on('new_order', handleNewOrder);
+
+      return () => {
+        socket.off('new_message', handleNewMessage);
+        socket.off('message:new', handleNewMessage);
+        socket.off('notification:new', handleNewNotification);
+        socket.off('new_order', handleNewOrder);
+      };
+    }
+  }, [socket, setUnreadMessages, setUnreadNotifications]);
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
@@ -160,17 +192,31 @@ const ShopDashboard: React.FC = () => {
     },
     {
       title: 'Messages',
-      icon: <MessageCircle />, // Changed to MessageCircle
+      icon: <MessageCircle />,
       color: '#2196F3',
       route: '/seller/messages',
-      badge: unreadMessages // USE CONTEXT VALUE
+      hasUnread: unreadMessages > 0,
+      showDot: true
     },
     {
       title: 'Orders',
       icon: <ShoppingBag />,
       color: '#FF9800',
       route: '/seller/orders',
-      badge: stats.pendingOrders
+      hasUnread: stats.pendingOrders > 0,
+      showDot: true
+    },
+    {
+      title: 'Returns',
+      icon: <AlertCircle />,
+      color: '#F44336',
+      route: '/seller/returns',
+    },
+    {
+      title: 'Profile',
+      icon: <User />,
+      color: '#9C27B0',
+      route: '/seller/profile',
     },
   ];
 
@@ -220,7 +266,8 @@ const ShopDashboard: React.FC = () => {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
-        contentContainerStyle={{ paddingBottom: 20 }}
+        style={{ flex: 1, backgroundColor: colors.background }}
+        contentContainerStyle={{ flexGrow: 1, backgroundColor: colors.background, paddingBottom: 20 }}
       >
         {/* Key Metrics Grid */}
         <View style={styles.sectionContainer}>
@@ -265,11 +312,9 @@ const ShopDashboard: React.FC = () => {
                   {React.cloneElement(action.icon as React.ReactElement<any>, { size: 24, color: action.color })}
                 </View>
                 <Text style={[styles.actionTitle, { color: colors.text }]}>{action.title}</Text>
-                {action.badge ? (
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>{action.badge}</Text>
-                  </View>
-                ) : null}
+                {action.showDot && action.hasUnread && (
+                  <View style={styles.redDot} />
+                )}
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -402,6 +447,17 @@ const styles = StyleSheet.create({
     borderColor: '#fff',
   },
   badgeText: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
+  redDot: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#FF3B30',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
   chartCard: { marginHorizontal: 20, marginTop: 24, padding: 16, borderRadius: 16, borderWidth: 1, alignItems: 'center' },
   chartHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, width: '100%' },
   chartTitle: { fontSize: 16, fontWeight: '700' },

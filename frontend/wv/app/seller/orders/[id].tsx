@@ -31,14 +31,12 @@ export default function OrderDetailScreen() {
     const [order, setOrder] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        loadOrderDetails();
-    }, [id]);
-
     const loadOrderDetails = async () => {
         try {
             setLoading(true);
             const response = await orderService.getOrder(id as string);
+            console.log('Order response:', JSON.stringify(response, null, 2));
+            console.log('Order userId:', response.order?.userId);
             setOrder(response.order);
         } catch (error) {
             console.error('Load order error:', error);
@@ -47,6 +45,10 @@ export default function OrderDetailScreen() {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        loadOrderDetails();
+    }, [id]);
 
     const handleUpdateStatus = () => {
         const statusOptions = [
@@ -118,7 +120,7 @@ export default function OrderDetailScreen() {
                     <Text style={[styles.errorText, { color: colors.text }]}>Order not found</Text>
                     <TouchableOpacity
                         style={[styles.backButton, { backgroundColor: colors.primary }]}
-                        onPress={() => router.back()}
+                        onPress={() => router.replace('/seller/orders')}
                     >
                         <Text style={styles.backButtonText}>Go Back</Text>
                     </TouchableOpacity>
@@ -131,7 +133,7 @@ export default function OrderDetailScreen() {
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
             {/* Header */}
             <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.headerBackButton}>
+                <TouchableOpacity onPress={() => router.replace('/seller/orders')} style={styles.headerBackButton}>
                     <Ionicons name="arrow-back" size={24} color={colors.text} />
                 </TouchableOpacity>
                 <Text style={[styles.headerTitle, { color: colors.text }]}>Order Details</Text>
@@ -162,19 +164,23 @@ export default function OrderDetailScreen() {
                     <View style={styles.infoRow}>
                         <Ionicons name="person-outline" size={20} color={colors.text + '80'} />
                         <Text style={[styles.infoText, { color: colors.text }]}>
-                            {order.userId?.fullName || 'N/A'}
+                            {order.userId?.fullName || order.shippingAddress?.fullName || 'N/A'}
                         </Text>
                     </View>
-                    {order.userId?.email && (
+                    {(order.userId?.email || order.shippingAddress?.email) && (
                         <View style={styles.infoRow}>
                             <Ionicons name="mail-outline" size={20} color={colors.text + '80'} />
-                            <Text style={[styles.infoText, { color: colors.text }]}>{order.userId.email}</Text>
+                            <Text style={[styles.infoText, { color: colors.text }]}>
+                                {order.userId?.email || order.shippingAddress?.email}
+                            </Text>
                         </View>
                     )}
-                    {order.userId?.phone && (
+                    {(order.userId?.phone || order.shippingAddress?.phone) && (
                         <View style={styles.infoRow}>
                             <Ionicons name="call-outline" size={20} color={colors.text + '80'} />
-                            <Text style={[styles.infoText, { color: colors.text }]}>{order.userId.phone}</Text>
+                            <Text style={[styles.infoText, { color: colors.text }]}>
+                                {order.userId?.phone || order.shippingAddress?.phone}
+                            </Text>
                         </View>
                     )}
                 </View>
@@ -322,6 +328,8 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingVertical: 12,
         borderBottomWidth: 1,
+        marginTop: 20,
+
     },
     headerBackButton: {
         width: 40,

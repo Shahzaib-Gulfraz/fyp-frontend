@@ -37,26 +37,59 @@ function RootLayoutNav() {
     console.log('🔍 RootLayout: Auth:', { isAuthenticated, userType, isLoading });
 
     const inAuthGroup = segments.includes("(auth)");
-    const inMainGroup = segments.includes("(main)") || (segments.length > 0 && segments[0] !== "(auth)" && segments[0] !== "(admin)");
+    const inSplash = pathname === "/splash" || pathname === "/";
+    const inSellerGroup = segments.includes("seller") || (segments.length > 0 && segments[0] === "seller");
+    const inMainGroup = segments.includes("(main)");
+    const inAdminGroup = segments.includes("(admin)");
 
-    if (!isAuthenticated && inMainGroup) {
-      console.log('🚫 RootLayout: Unauthenticated in main group, redirecting to login');
-      router.replace("/(auth)/login");
-    } 
-    /* 
-    // TEMPORARY: Allow access to login page even if authenticated
-    else if (isAuthenticated && inAuthGroup) {
-      console.log('✅ RootLayout: Authenticated in auth group, redirecting to dashboard');
-      if (userType === "admin") {
-        router.replace("/(admin)/dashboard");
-      } else if (userType === "shop") {
+    // Allow unauthenticated access to splash and auth screens only
+    if (!isAuthenticated) {
+      if (inSplash || inAuthGroup) {
+        // Allow these screens
+        return;
+      }
+      // Redirect any other unauthenticated access to index (presplash)
+      console.log('🚫 RootLayout: Unauthenticated user trying to access protected route, redirecting to presplash');
+      router.replace("/");
+      return;
+    }
+
+    // Authenticated users - redirect to their appropriate dashboard if on splash/auth
+    if (isAuthenticated && (inSplash || inAuthGroup)) {
+      if (userType === 'shop') {
+        console.log('🏪 RootLayout: Authenticated shop on splash/auth, redirecting to seller dashboard');
         router.replace("/seller/dashboard");
+      } else if (userType === 'admin') {
+        console.log('👑 RootLayout: Authenticated admin on splash/auth, redirecting to admin dashboard');
+        router.replace("/(admin)/dashboard");
       } else {
+        console.log('👤 RootLayout: Authenticated user on splash/auth, redirecting to home');
         router.replace("/(main)/home");
       }
-    } 
-    */
-  }, [isAuthenticated, userType, isLoading, segments]);
+      return;
+    }
+
+    // Prevent shop users from accessing main/admin routes
+    if (isAuthenticated && userType === "shop" && (inMainGroup || inAdminGroup)) {
+      console.log('🏪 RootLayout: Shop user in wrong group, redirecting to seller dashboard');
+      router.replace("/seller/dashboard");
+      return;
+    }
+
+    // Prevent regular users from accessing seller/admin routes
+    if (isAuthenticated && userType === "user" && (inSellerGroup || inAdminGroup)) {
+      console.log('👤 RootLayout: Regular user in wrong group, redirecting to home');
+      router.replace("/(main)/home");
+      return;
+    }
+
+    // Prevent admin from accessing regular/seller routes (optional)
+    if (isAuthenticated && userType === "admin" && (inMainGroup || inSellerGroup)) {
+      console.log('👑 RootLayout: Admin in wrong group, redirecting to admin dashboard');
+      router.replace("/(admin)/dashboard");
+      return;
+    }
+  }, [isAuthenticated, userType, isLoading, segments, pathname]);
 
   if (isLoading) {
     return (

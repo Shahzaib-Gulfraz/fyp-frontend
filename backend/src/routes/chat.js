@@ -9,6 +9,7 @@ router.post('/shop/:conversationId/reply', shopProtect, chatController.replyToSh
 
 // Routes that need both User and Shop access
 router.get('/messages/:conversationId', multiProtect, chatController.getMessages);
+router.post('/mark-read', multiProtect, chatController.markConversationRead);
 
 // User-to-User & User-to-Shop Routes (From User perspective)
 // All these require USER authentication
@@ -22,6 +23,5 @@ router.post('/start', chatController.startChat);
 router.get('/shop/:shopId', chatController.getOrCreateShopConversation);
 router.post('/shop/:shopId/message', chatController.sendShopMessage);
 router.get('/shop/:shopId/products', chatController.getShopProducts);
-router.post('/mark-read', chatController.markConversationRead);
 
 module.exports = router;

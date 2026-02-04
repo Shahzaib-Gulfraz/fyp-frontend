@@ -34,11 +34,12 @@ export default function PostCard({ post, onLikeToggle, onCommentPress, onUserPre
     const { user } = useUser();
 
     // Safe URIs to prevent RCTImageView crashes when backend returns objects
-    const userProfileImage = typeof post.userId.profileImage === 'string'
+    const userProfileImage = post.userId && typeof post.userId.profileImage === 'string'
         ? post.userId.profileImage
-        : (post.userId.profileImage as any)?.url;
+        : post.userId ? (post.userId.profileImage as any)?.url : null;
 
-    const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(post.userId.fullName || post.userId.username || 'User')}&background=random`;
+    const userName = post.userId?.fullName || post.userId?.username || 'Unknown User';
+    const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=random`;
 
     const postImageUri = typeof post.image === 'string'
         ? post.image
@@ -102,7 +103,7 @@ export default function PostCard({ post, onLikeToggle, onCommentPress, onUserPre
             <View style={[styles.header, { padding: spacing.md }]}>
                 <TouchableOpacity
                     style={styles.userInfo}
-                    onPress={() => onUserPress?.(post.userId._id)}
+                    onPress={() => post.userId?._id && onUserPress?.(post.userId._id)}
                 >
                     <Image
                         source={{
@@ -112,7 +113,7 @@ export default function PostCard({ post, onLikeToggle, onCommentPress, onUserPre
                     />
                     <View style={{ marginLeft: spacing.sm }}>
                         <Text style={[styles.username, { color: colors.text }]}>
-                            {post.userId.username}
+                            {post.userId?.username || userName}
                         </Text>
                         <Text style={[styles.time, { color: colors.textSecondary }]}>
                             {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
@@ -218,7 +219,7 @@ export default function PostCard({ post, onLikeToggle, onCommentPress, onUserPre
                     <TouchableOpacity onPress={() => onCommentPress?.(post._id)}>
                         <View style={styles.captionContainer}>
                             <Text style={[styles.caption, { color: colors.text }]}>
-                                <Text style={{ fontWeight: 'bold' }}>{post.userId.username}</Text>
+                                <Text style={{ fontWeight: 'bold' }}>{post.userId?.username || userName}</Text>
                                 {` ${post.caption}`}
                             </Text>
                         </View>

@@ -34,7 +34,7 @@ const notificationSchema = new mongoose.Schema({
     },
     refModel: {
         type: String,
-        enum: ['Post', 'Order', 'User', 'Product']
+        enum: ['Post', 'Order', 'User', 'Product', 'Conversation']
     },
     text: {
         type: String,

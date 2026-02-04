@@ -15,7 +15,7 @@ const getBaseUrl = () => {
             return 'http://localhost:3000/api';
         }
         // LAN IP for device testing
-        return 'http://192.168.100.44:3000/api';
+        return 'http://10.88.184.78:3000/api';
     }
     return 'https://your-production-api.com/api';
 };

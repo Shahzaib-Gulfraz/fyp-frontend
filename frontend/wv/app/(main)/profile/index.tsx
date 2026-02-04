@@ -69,8 +69,8 @@ export default function ProfileScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
 
+  // Run animation only once on mount
   useEffect(() => {
-    refreshProfile();
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
