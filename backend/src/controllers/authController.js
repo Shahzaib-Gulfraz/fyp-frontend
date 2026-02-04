@@ -75,13 +75,13 @@ const login = async (req, res) => {
 
         if (!user) {
             console.log("❌ User not found:", email);
-            return res.status(404).json({ message: 'Email not found' });
+            return res.status(401).json({ message: 'Invalid credentials' });
         }
 
         // Check if account is active
         if (!user.isActive) {
             console.log("❌ Account inactive for:", email);
-            return res.status(401).json({ message: 'Account is deactivated' });
+            return res.status(401).json({ message: 'Invalid credentials' });
         }
 
         // Check password
@@ -90,7 +90,7 @@ const login = async (req, res) => {
 
         if (!isMatch) {
             console.log("❌ Password mismatch for:", email);
-            return res.status(401).json({ message: 'Invalid password' });
+            return res.status(401).json({ message: 'Invalid credentials' });
         }
 
         // Update last login
