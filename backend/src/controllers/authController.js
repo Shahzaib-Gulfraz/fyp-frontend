@@ -74,7 +74,7 @@ const login = async (req, res) => {
         const user = await User.findOne({ email }).select('+password');
 
         if (!user) {
-            console.log("❌ User not found:", email);
+            console.log("❌ Invalid credentials attempt for:", email);
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
@@ -89,7 +89,7 @@ const login = async (req, res) => {
         const isMatch = await user.comparePassword(password);
 
         if (!isMatch) {
-            console.log("❌ Password mismatch for:", email);
+            console.log("❌ Invalid credentials attempt for:", email);
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
