@@ -1,7 +1,7 @@
 const Return = require('../models/Return');
 const Order = require('../models/Order');
 const Notification = require('../models/Notification');
-const { io, getSocketId } = require('../socket/socketService');
+const socketService = require('../socket/socketService');
 const { createNotification } = require('./notificationController');
 
 // @desc    Create return request
