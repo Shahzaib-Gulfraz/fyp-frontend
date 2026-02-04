@@ -9,11 +9,14 @@ async function seedAdmin() {
     await connectDB();
     console.log('📦 Connected to MongoDB');
 
-    // Get admin password from environment variable or use default
-    const adminPassword = process.env.ADMIN_PASSWORD || 'Admin@123456';
+    // Get admin password from environment variable
+    const adminPassword = process.env.ADMIN_PASSWORD;
     
-    if (!process.env.ADMIN_PASSWORD) {
-      console.log('⚠️  ADMIN_PASSWORD not set in .env file, using default password');
+    if (!adminPassword) {
+      console.error('❌ Error: ADMIN_PASSWORD environment variable is required');
+      console.log('Please set ADMIN_PASSWORD in your .env file');
+      console.log('Example: ADMIN_PASSWORD=YourSecurePassword123');
+      process.exit(1);
     }
 
     // Delete existing admin accounts
