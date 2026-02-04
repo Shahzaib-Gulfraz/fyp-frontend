@@ -15,7 +15,7 @@ async function seedAdmin() {
     if (!adminPassword) {
       console.error('❌ Error: ADMIN_PASSWORD environment variable is required');
       console.log('Please set ADMIN_PASSWORD in your .env file');
-      console.log('Example: ADMIN_PASSWORD=YourSecurePassword123');
+      console.log('Example: ADMIN_PASSWORD=your_secure_password_here');
       process.exit(1);
     }
 
