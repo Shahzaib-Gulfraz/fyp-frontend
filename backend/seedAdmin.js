@@ -9,6 +9,16 @@ async function seedAdmin() {
     await connectDB();
     console.log('📦 Connected to MongoDB');
 
+    // Get admin password from environment variable
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    
+    if (!adminPassword) {
+      console.error('❌ Error: ADMIN_PASSWORD environment variable is required');
+      console.log('Please set ADMIN_PASSWORD in your .env file');
+      console.log('Example: ADMIN_PASSWORD=your_secure_password_here');
+      process.exit(1);
+    }
+
     // Delete existing admin accounts
     const deletedCount = await User.deleteMany({ role: 'admin' });
     if (deletedCount.deletedCount > 0) {
@@ -19,7 +29,7 @@ async function seedAdmin() {
     const admin = await User.create({
       username: 'admin',
       email: 'admin@wearvirtually.com',
-      password: 'Admin123', // Simple password
+      password: adminPassword,
       fullName: 'Administrator',
       phone: '+92300000000',
       role: 'admin',
@@ -32,7 +42,7 @@ async function seedAdmin() {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('Email:    admin@wearvirtually.com');
     console.log('Username: admin');
-    console.log('Password: Admin@123456');
+    console.log('Password: <as configured in ADMIN_PASSWORD>');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
     console.log('⚠️  Change password after first login!\n');
 
