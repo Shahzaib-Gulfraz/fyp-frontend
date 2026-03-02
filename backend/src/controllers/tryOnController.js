@@ -1,4 +1,5 @@
 const Replicate = require('replicate');
+const mongoose = require('mongoose');
 const TryOn = require('../models/TryOn');
 const { validationResult } = require('express-validator');
 
@@ -25,10 +26,6 @@ const generateTryOn = async (req, res) => {
         if (!process.env.REPLICATE_API_TOKEN) {
             return res.status(500).json({ message: 'Replicate API token not configured' });
         }
-
-        const mongoose = require('mongoose');
-
-        // ...
 
         // Create initial record
         let validGarmentId = null;

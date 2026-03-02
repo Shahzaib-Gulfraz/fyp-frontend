@@ -15,11 +15,14 @@ async function seedAdmin() {
       console.log('🗑️  Deleted', deletedCount.deletedCount, 'existing admin account(s)');
     }
 
+    // Get admin password from environment variable or use default
+    const adminPassword = process.env.ADMIN_PASSWORD || 'Admin@123456';
+    
     // Create NEW admin user
     const admin = await User.create({
       username: 'admin',
       email: 'admin@wearvirtually.com',
-      password: 'Admin123', // Simple password
+      password: adminPassword,
       fullName: 'Administrator',
       phone: '+92300000000',
       role: 'admin',
